@@ -164,6 +164,7 @@ FALSE    f[aA][lL][sS][eE]
 }
 
 <COMMENT><<EOF>>	{ 
+        BEGIN(INITIAL);
         cool_yylval.error_msg = "EOF in comment";
         return ERROR; 
       }
