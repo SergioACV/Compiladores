@@ -43,6 +43,14 @@ extern YYSTYPE cool_yylval;
  *  Add Your own definitions here
  */
 
+int comment_level = 0; /* to track nested comments */
+
+/*function to check the length of the string exceeds max len*/
+bool isLong();
+
+/*function to print error if maximum length is exceeded*/
+int maxlen_error(); 
+
 %}
 
 /*
@@ -54,7 +62,7 @@ extern YYSTYPE cool_yylval;
 
 %x STRING
 
-%x NESTEDCOMMENT
+%x COMMENT
 
  /* DEFINE ERROR STATES */
 
@@ -91,8 +99,7 @@ OF              [oO][fF]
 NEW             [nN][eE][wW]  
 ISVOID          [iI][sS][vV][oO][iI][dD]
 INT_CONST       (DIGITS)+
-
-BOOL_CONST     (t[rR][Uu][Ee]|f[aA][lL][sS][eE]) 
+ 
 NOT       [nN][oO][tT]
 
 WHITESPACE [\t ]*
@@ -105,6 +112,11 @@ NEWLINE   \r?\n
  // Comments
 
 SINGLECOMMENT "--"(.)*
+
+ //Booleans
+
+TRUE     t[rR][uU][eE]
+FALSE    f[aA][lL][sS][eE]
 
 
 %%
@@ -125,7 +137,7 @@ SINGLECOMMENT "--"(.)*
 
 
  /*
-  * Single comments
+  * Single comments: ignore them
  */
 
 {SINGLECOMMENT} {
@@ -135,18 +147,23 @@ SINGLECOMMENT "--"(.)*
 
  /*
   *  Nested comments
-  */
+*/
+"(*"			{ 
+  BEGIN(COMMENT); 
+  comment_level = 1;
 
-"(*" {
-  BEGIN(NESTEDCOMMENT)
-  printf("Possible comment")
 }
 
-{NESTEDCOMMENT}"*)" {
-  BEGIN(INITIAL)
-}
+<COMMENT>"(*"		{ comment_level++;  }
+<COMMENT>\n		{ curr_lineno++; }
+<COMMENT>[^(*\n]+	;  
 
-
+<COMMENT>"*)"		{ 
+        comment_level--; 
+        if (comment_level == 0) {
+          BEGIN(INITIAL);
+        }
+      }
 
  /*
   *  The multiple-character operators.
@@ -199,6 +216,9 @@ SINGLECOMMENT "--"(.)*
 {OF}	 		{ return OF;}
 {NOT}	 		{ return NOT;}
 
+{TRUE}          { cool_yylval.boolean = true; return BOOL_CONST; }
+{FALSE}         { cool_yylval.boolean = false; return BOOL_CONST; }
+
  /*
   *  TYPEID
   */
@@ -245,6 +265,11 @@ SINGLECOMMENT "--"(.)*
   */
 
 <STRING>\" {
+
+  if (isLong()){
+				return maxlen_error();
+	}
+  
   string_buf_ptr = 0;
   cool_yylval.symbol = stringtable.add_string(string_buf);
   BEGIN(INITIAL);
@@ -258,6 +283,10 @@ SINGLECOMMENT "--"(.)*
   */
 
 <STRING><<EOF>> {
+
+    if (isLong()){
+				return maxlen_error();
+    }
     
     cool_yylval.error_msg = "EOF in string constant";
     BEGIN(INITIAL);
@@ -270,6 +299,10 @@ SINGLECOMMENT "--"(.)*
   */ 
 
 <STRING>\n {
+
+    if (isLong()){
+				return maxlen_error();
+    }
     
     curr_lineno++;
     cool_yylval.error_msg = "Unterminated string constant";
@@ -283,48 +316,104 @@ SINGLECOMMENT "--"(.)*
   * Null character in string throws error
   */
 
-<STRING>\0 {
-    
-    cool_yylval.error_msg = "String contains null character";
-    BEGIN(INITIAL);
-    return ERROR;
+<STRING>\\[0]		{
+			BEGIN(INVALID_STRING);
+			cool_yylval.error_msg = "String contains null character";
+			return ERROR;
 }
 
  /*
   * Normal cases
   */
 
-<STRING>\\\n { curr_lineno++; }
+<STRING>\\\n { 
+  if (isLong()){
+				return maxlen_error();
+  }
+  
+  *string_buf_ptr++ = '\n';
+  curr_lineno++; 
+}
 
 <STRING>\\[^ntbf] {
+
+  if (isLong()){
+				return maxlen_error();
+  }
     
     *string_buf_ptr++ = yytext[1];
 }
 
 <STRING>\\[n] {
+    if (isLong()){
+				return maxlen_error();
+    }
    
     *string_buf_ptr++ = '\n';
 }
 
 <STRING>\\[t] {
 
-    *string_buf_ptr++ = '\t';
+  if (isLong()){
+				return maxlen_error();
+  }
+
+  *string_buf_ptr++ = '\t';
 }
 
 <STRING>\\[b] {
+
+    if (isLong()){
+				return maxlen_error();
+    }
 
     *string_buf_ptr++ = '\b';
 }
 
 <STRING>\\[f] {
 
+    if (isLong()){
+				return maxlen_error();
+    }
+
     *string_buf_ptr++ = '\f';
 }
 
 <STRING>. {
+
+    if (isLong()){
+				return maxlen_error();
+    }
  
     *string_buf_ptr++ = *yytext;
 }
+
+ /*_________________________________________________________________________________________________________________________________
+
+	The INVALID_STRING state that's used to deal with the string after invalid component is detected.
+   __________________________________________________________________________________________________________________________________
+
+  */
+
+ /* If an inverted comma " is detected, the end of the invalid string is encountered. Therefore, return to INITIAL state*/
+<INVALID_STRING>\" 	{BEGIN(INITIAL);}
+
+ /*If a next line is detected inside an invalid string, increase line number and go to INITIAL state to start tokenizing the next line*/
+<INVALID_STRING>\n 	{ 
+			 curr_lineno++;
+			 BEGIN(INITIAL);
+  }
+
+ /*Capture escaped newline inside invalid string, and increase line number*/
+<INVALID_STRING>\\\n	{curr_lineno++;}
+
+ /* If any char encountered after \, stay in this state because the string is not yet terminated*/
+<INVALID_STRING>\\.	;
+
+ /*If any character except \,\n," encountered, stay in this state because the string is not yet terminated*/
+<INVALID_STRING>[^\\\n\"]+ ;
+
+
 
 
  /*
@@ -332,12 +421,37 @@ SINGLECOMMENT "--"(.)*
   * Handle errors
  */
 
-.   { /* manejar caracteres inesperados */
+.   {
       fprintf(stderr, "Unexpected character: %s\n", yytext);
-      return ERROR; /* o simplemente ignorar */
-}
-
-
+      cool_yylval.error_msg = strdup(yytext);
+			return ERROR;
+    }
 
 
 %%
+
+
+	/* ___________________________Helper functions used in STRING state________________________________________*/
+
+
+/*function to check the length of the string*/
+bool isLong(){
+
+	/* String length =  ending pointer position of string - starting pointer position of string +1
+			 = string_buf_ptr - string_buf+1
+	
+	if string length > MAX_STR_CONST -> return TRUE
+	if string length < MAX_STR_CONST -> return FALSE
+	*/
+	return (string_buf_ptr - string_buf + 1 > MAX_STR_CONST);
+
+}
+
+/*function to print error if maximum length is exceeded*/
+int maxlen_error(){
+	BEGIN(INVALID_STRING); ///should continue reading the string
+	cool_yylval.error_msg = "String constant too long";
+	
+	return ERROR;
+}
+
