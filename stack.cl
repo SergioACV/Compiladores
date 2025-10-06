@@ -1,8 +1,2 @@
-class Main {
-    main(): Object {
-        (* Comentario externo
-            (* Comentario interno anidado *)
-           Fin comentario externo *)
-        out_string("Nested comments!");
-    };
-};
+(* null character in string *)
+"null character is here ->\000<-"

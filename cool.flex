@@ -104,8 +104,8 @@ NOT       [nN][oO][tT]
 
 WHITESPACE [\t ]*
 
-TYPEID    [A-Z]({LETTER}|{DIGIT}|\_)*
-OBJECTID  [a-z]({LETTER}|{DIGIT}|\_)*
+TYPEID  [A-Z]([a-zA-Z0-9_])*
+OBJECTID  [a-z]([a-zA-Z0-9_])*
 
 NEWLINE   \r?\n
 
@@ -144,6 +144,15 @@ FALSE    f[aA][lL][sS][eE]
   
 }
 
+ /* unmatched *) */
+
+"*)"			{ 
+    cool_yylval.error_msg = "Unmatched *)";
+    return ERROR;
+  
+}
+
+
 
  /*
   *  Nested comments
@@ -153,6 +162,16 @@ FALSE    f[aA][lL][sS][eE]
   comment_level = 1;
 
 }
+
+<COMMENT><<EOF>>	{ 
+        cool_yylval.error_msg = "EOF in comment";
+        return ERROR; 
+      }
+
+ /*
+  *  Inside comments, we must handle newlines and nested comments.
+  *  Other characters are ignored.
+  */
 
 <COMMENT>"(*"		{ comment_level++;  }
 <COMMENT>\n		{ curr_lineno++; }
@@ -230,7 +249,7 @@ FALSE    f[aA][lL][sS][eE]
 }
 
  /*
-  *  TYPEID
+  *  OBEJCT D
   */
 {OBJECTID} {
   cool_yylval.symbol = inttable.add_string(yytext);
@@ -316,7 +335,7 @@ FALSE    f[aA][lL][sS][eE]
   * Null character in string throws error
   */
 
-<STRING>\\[0]		{
+<STRING>\\?\0		{
 			BEGIN(INVALID_STRING);
 			cool_yylval.error_msg = "String contains null character";
 			return ERROR;
@@ -422,7 +441,6 @@ FALSE    f[aA][lL][sS][eE]
  */
 
 .   {
-      fprintf(stderr, "Unexpected character: %s\n", yytext);
       cool_yylval.error_msg = strdup(yytext);
 			return ERROR;
     }
