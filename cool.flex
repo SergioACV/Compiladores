@@ -176,7 +176,7 @@ FALSE    f[aA][lL][sS][eE]
 
 <COMMENT>"(*"		{ comment_level++;  }
 <COMMENT>\n		{ curr_lineno++; }
-<COMMENT>[^(*\n]+	;  
+<COMMENT>. { }
 
 <COMMENT>"*)"		{ 
         comment_level--; 
@@ -290,7 +290,7 @@ FALSE    f[aA][lL][sS][eE]
 				return maxlen_error();
 	}
   
-  string_buf_ptr = 0;
+  *string_buf_ptr = '\0'; /* null terminate the string */
   cool_yylval.symbol = stringtable.add_string(string_buf);
   BEGIN(INITIAL);
   return STR_CONST;
