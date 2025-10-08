@@ -364,3 +364,71 @@ Acción: Se guarda el texto en cool_yylval.error_msg y se retorna el token ERROR
 
 Resumen
 En esta sección se han definido las reglas del analizador léxico, que determinan cómo se procesan los diferentes tokens del lenguaje COOL. Cada regla tiene un patrón (expresión regular) y una acción que se ejecuta cuando el patrón es detectado. Las reglas incluyen el manejo de comentarios, operadores, identificadores, constantes, cadenas de texto y manejo de errores.
+
+# Proyecto Compilador COOL - Subrutinas de Usuario
+
+Esta sección detalla las subrutinas de usuario utilizadas en el analizador léxico del compilador COOL. Estas funciones ayudan a manejar situaciones especiales durante el análisis léxico, como la verificación de la longitud de las cadenas y el manejo de errores relacionados con las cadenas.
+
+## Comentarios y Funciones de Ayuda en el Estado STRING
+
+Cuando el analizador léxico está procesando cadenas de texto en el estado `STRING`, se utilizan ciertas funciones para garantizar que las cadenas se manejen correctamente y para detectar errores si la longitud de una cadena excede el límite permitido.
+
+### 1. Función `isLong()`
+
+```c
+/*function to check the length of the string*/
+bool isLong() {
+    /* String length = ending pointer position of string - starting pointer position of string +1
+         = string_buf_ptr - string_buf + 1
+    
+    if string length > MAX_STR_CONST -> return TRUE
+    if string length < MAX_STR_CONST -> return FALSE
+    */
+    return (string_buf_ptr - string_buf + 1 > MAX_STR_CONST);
+}
+Explicación:
+Objetivo: La función isLong() tiene como propósito verificar si la longitud de una cadena es mayor que el valor máximo permitido, que en este caso es MAX_STR_CONST.
+
+Cómo funciona:
+
+La diferencia entre string_buf_ptr y string_buf calcula el número de caracteres que han sido agregados hasta el momento en la cadena.
+
+La suma de +1 es para incluir el primer carácter de la cadena.
+
+La expresión string_buf_ptr - string_buf + 1 calcula la longitud de la cadena procesada en el buffer string_buf.
+
+Comparación:
+
+Si la longitud de la cadena es mayor que MAX_STR_CONST, la función devuelve true.
+
+Si la longitud de la cadena es menor o igual a MAX_STR_CONST, la función devuelve false.
+
+¿Por qué se usa?: Esta función es importante para verificar si la cadena excede el tamaño máximo permitido. Si la cadena es demasiado larga, se maneja como un error para evitar desbordamientos de memoria o comportamientos inesperados.
+
+2. Función maxlen_error()
+c
+Copiar código
+/*function to print error if maximum length is exceeded*/
+int maxlen_error() {
+    BEGIN(INVALID_STRING); // should continue reading the string
+    cool_yylval.error_msg = "String constant too long";
+    
+    return ERROR;
+}
+Explicación:
+Objetivo: La función maxlen_error() maneja el error que ocurre cuando una cadena de texto supera el límite de longitud permitido (es decir, cuando isLong() devuelve true).
+
+Acción:
+
+BEGIN(INVALID_STRING): Cambia el estado del scanner a INVALID_STRING, lo que indica que la cadena ha excedido la longitud máxima y ahora se encuentra en un estado de error. Esto ayuda a que el scanner continúe procesando la entrada sin confundirla con cadenas válidas.
+
+cool_yylval.error_msg = "String constant too long";: Se asigna un mensaje de error a la variable cool_yylval.error_msg. Este mensaje se usará para informar que la cadena es demasiado larga para ser válida en COOL.
+
+return ERROR;: La función retorna un token ERROR, lo que indica que algo salió mal (en este caso, que la cadena es demasiado larga). Esto informa al analizador sintáctico (parser) de que un error ha ocurrido y se debe manejar.
+
+¿Por qué se usa?: Esta función es crucial para detectar cadenas de texto que exceden el tamaño máximo permitido y notificar el error de manera clara para que el parser pueda manejarlo adecuadamente.
+
+go
+Copiar código
+
+Este bloque contiene la descripción de las subrutinas relacionadas con el manejo de cadenas en el
