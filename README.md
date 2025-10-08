@@ -54,7 +54,10 @@ bool isLong();
 /* Function to print error if maximum length is exceeded */
 int maxlen_error(); 
 %}
-Definiciones de Estados y Expresiones Regulares
+
+```
+
+# Definiciones de Estados y Expresiones Regulares
 Este documento detalla las definiciones utilizadas en el analizador léxico del compilador COOL, que es responsable de identificar tokens a partir del código fuente. Estas definiciones se dividen en dos secciones principales: Definición de Estados y Definición de Expresiones Regulares.
 
 1. Definición de Estados (%x)
@@ -150,7 +153,7 @@ En esta sección se han definido los estados y expresiones regulares que el anal
 
 Cada expresión regular se asigna a un tipo de token específico, que es devuelto por el scanner cuando ese patrón se encuentra en el código fuente. Esto permite que el código COOL sea correctamente tokenizado y procesado por el analizador sintáctico posterior.
 
-Reglas del Analizador Léxico
+# Reglas del Analizador Léxico
 Este documento detalla las reglas del analizador léxico del compilador COOL. Cada regla en Flex está formada por un patrón y una acción que se ejecuta cuando el patrón es detectado en el código fuente. Las reglas aquí definidas permiten al analizador léxico procesar los diferentes componentes del lenguaje COOL, como operadores, identificadores, palabras clave, comentarios, y más.
 
 1. Manejo de Nuevas Líneas
