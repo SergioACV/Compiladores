@@ -64,11 +64,14 @@ Este documento detalla las definiciones utilizadas en el analizador léxico del 
 En esta sección se definen los estados que el analizador léxico puede tener durante la ejecución. Los estados permiten al analizador controlar el flujo de procesamiento de diferentes tipos de tokens y manejar situaciones especiales como cadenas de texto y comentarios.
 
 ## Estados Definidos
+
+```
 %x STRING: Este estado se utiliza para procesar cadenas de texto en el lenguaje COOL. Cuando el analizador entra en este estado, se asegura de que está dentro de una cadena de caracteres y procesará los caracteres hasta que encuentre el delimitador de cierre de la cadena.
 
 %x COMMENT: Este estado se usa para manejar comentarios en el código COOL. Los comentarios pueden ser de una sola línea o anidados, y cuando el analizador entra en este estado, ignora el contenido de los comentarios hasta que se cierra el bloque de comentario correspondiente.
 
 %x INVALID_STRING: Este estado maneja los errores dentro de una cadena de texto, como cadenas que contienen un carácter nulo \0 o cadenas que exceden la longitud máxima permitida. Al detectar un error, el analizador puede realizar una acción adecuada, como emitir un mensaje de error.
+```
 
 2. Definición de Expresiones Regulares
 Las expresiones regulares son patrones que el analizador léxico utiliza para identificar diferentes tipos de tokens en el código fuente de COOL. A continuación se detallan las expresiones regulares para los operadores, palabras clave, constantes y otros elementos importantes del lenguaje COOL.
