@@ -12,7 +12,7 @@ La primera parte del archivo de especificaciones de Flex contiene declaraciones 
 
 En el caso del proyecto COOL, la sección de declaraciones incluye lo siguiente:
 
-```c
+```
 %{
 #include <cool-parse.h>
 #include <stringtab.h>
@@ -154,8 +154,8 @@ Reglas del Analizador Léxico
 Este documento detalla las reglas del analizador léxico del compilador COOL. Cada regla en Flex está formada por un patrón y una acción que se ejecuta cuando el patrón es detectado en el código fuente. Las reglas aquí definidas permiten al analizador léxico procesar los diferentes componentes del lenguaje COOL, como operadores, identificadores, palabras clave, comentarios, y más.
 
 1. Manejo de Nuevas Líneas
-c
-Copiar código
+
+
 {NEWLINE} {
   curr_lineno++;
 }
@@ -165,8 +165,8 @@ Patrón: Se detecta un salto de línea (NEWLINE).
 Acción: Se incrementa el contador de líneas (curr_lineno). Esto es útil para llevar un registro de la ubicación en el código, lo que es esencial para reportar errores de manera precisa.
 
 2. Ignorar Espacios en Blanco
-c
-Copiar código
+
+
 {WHITESPACE} { }
 Explicación:
 Patrón: Se detecta un espacio en blanco o un tabulador (WHITESPACE).
@@ -174,8 +174,8 @@ Patrón: Se detecta un espacio en blanco o un tabulador (WHITESPACE).
 Acción: No se realiza ninguna acción, ya que los espacios en blanco no afectan el análisis léxico y se descartan.
 
 3. Comentarios de Una Sola Línea (Ignorarlos)
-c
-Copiar código
+
+
 {SINGLECOMMENT} { }
 Explicación:
 Patrón: Se detecta un comentario de una sola línea, que comienza con --.
@@ -183,8 +183,8 @@ Patrón: Se detecta un comentario de una sola línea, que comienza con --.
 Acción: El comentario es ignorado, no se realiza ninguna acción adicional.
 
 4. Manejo de Comentarios Mal Cerrados
-c
-Copiar código
+
+
 "*)" {
   cool_yylval.error_msg = "Unmatched *)";
   return ERROR;
@@ -196,8 +196,8 @@ Acción: Se asigna un mensaje de error a cool_yylval.error_msg que indica "Unmat
 
 5. Manejo de Comentarios Anidados
 Entrada en un Comentario
-c
-Copiar código
+
+
 "(*" { 
   BEGIN(COMMENT); 
   comment_level = 1;
@@ -208,8 +208,8 @@ Patrón: Se encuentra un (*, indicando el inicio de un comentario.
 Acción: Cambia al estado COMMENT y establece comment_level = 1 para rastrear el nivel de anidamiento de comentarios.
 
 Manejo de Comentarios Anidados
-c
-Copiar código
+
+
 <COMMENT>"(*" { comment_level++; }
 <COMMENT>\n { curr_lineno++; }
 <COMMENT>. { }
@@ -219,8 +219,8 @@ Patrón: Si se encuentra otro (* dentro de un comentario, se incrementa el nivel
 Acción: Si se encuentra un salto de línea (\n), se incrementa curr_lineno. Los demás caracteres dentro del comentario se ignoran.
 
 Salida de un Comentario
-c
-Copiar código
+
+
 <COMMENT>"*)" { 
   comment_level--; 
   if (comment_level == 0) {
@@ -233,8 +233,8 @@ Patrón: Se encuentra un *) en el estado COMMENT.
 Acción: Se decrementa comment_level. Si el nivel de comentarios llega a 0, se regresa al estado inicial (BEGIN(INITIAL)), indicando que el comentario ha terminado.
 
 6. Operadores y Delimitadores
-c
-Copiar código
+
+
 "." { return '.';}
 "@" { return '@';}
 "~" { return '~';}
@@ -257,8 +257,8 @@ Patrón: Cada uno de estos patrones corresponde a un operador o delimitador en e
 Acción: Cuando se detecta el operador o delimitador, se retorna el token correspondiente. Por ejemplo, un + se convierte en el token +.
 
 7. Palabras Clave (Keywords)
-c
-Copiar código
+
+
 {CLASS} { return CLASS; }
 {IF}    { return IF; }
 {FI}    { return FI; }
@@ -268,8 +268,8 @@ Patrón: Las palabras clave como CLASS, IF, FI, etc., se definen en el código u
 Acción: Se devuelve el token correspondiente a la palabra clave. Por ejemplo, si se encuentra CLASS, se devuelve el token CLASS.
 
 8. Valores Booleanos (TRUE y FALSE)
-c
-Copiar código
+
+
 {TRUE} { cool_yylval.boolean = true; return BOOL_CONST; }
 {FALSE} { cool_yylval.boolean = false; return BOOL_CONST; }
 Explicación:
@@ -278,8 +278,8 @@ Patrón: Coincide con los valores booleanos TRUE y FALSE, independientemente de 
 Acción: Se asigna el valor true o false a cool_yylval.boolean y se retorna el token BOOL_CONST.
 
 9. Identificadores (TYPEID y OBJECTID)
-c
-Copiar código
+
+
 {TYPEID} {
   cool_yylval.symbol = inttable.add_string(yytext);
   return TYPEID;
@@ -290,8 +290,8 @@ Patrón: Coincide con identificadores de tipo (TYPEID) y objetos (OBJECTID).
 Acción: Se agrega el identificador a la tabla de símbolos (inttable) y se retorna el token TYPEID o OBJECTID.
 
 10. Constantes Enteras (INT_CONST)
-c
-Copiar código
+
+
 {DIGITS} {
   cool_yylval.symbol = inttable.add_string(yytext);
   return INT_CONST;
@@ -303,8 +303,8 @@ Acción: La constante entera se agrega a la tabla de símbolos y se retorna el t
 
 11. Cadenas de Texto
 Inicio de una Cadena
-c
-Copiar código
+
+
 \" {
   string_buf_ptr = string_buf;
   BEGIN(STRING);
@@ -315,8 +315,8 @@ Patrón: Cuando se encuentra una comilla doble (\"), se inicia una cadena.
 Acción: Se inicia el buffer de cadena y se cambia al estado STRING.
 
 Fin de la Cadena
-c
-Copiar código
+
+
 <STRING>\" {
   if (isLong()) { return maxlen_error(); }
   *string_buf_ptr = '\\0'; /* null terminate the string */
@@ -330,8 +330,8 @@ Patrón: Cuando se encuentra una comilla doble (\") dentro del estado STRING, se
 Acción: Se verifica si la cadena es válida (no demasiado larga) y se agrega a la tabla de cadenas. Luego, se retorna el token STR_CONST.
 
 Error de Cadena No Terminada
-c
-Copiar código
+
+
 <STRING>\n {
   if (isLong()) { return maxlen_error(); }
   curr_lineno++;
@@ -348,8 +348,8 @@ Acción: Se incrementa el número de línea y se retorna un error, indicando que
 Cuando se detecta un error dentro de una cadena (por ejemplo, un carácter nulo \0), el scanner cambia al estado INVALID_STRING y genera un error.
 
 13. Manejo de Errores Generales
-c
-Copiar código
+
+
 . {
   cool_yylval.error_msg = strdup(yytext);
   return ERROR;
