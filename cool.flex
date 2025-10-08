@@ -102,7 +102,7 @@ INT_CONST       (DIGITS)+
  
 NOT       [nN][oO][tT]
 
-WHITESPACE [\t ]*
+WHITESPACE [\n\t\f\r\v ]*
 
 TYPEID  [A-Z]([a-zA-Z0-9_])*
 OBJECTID  [a-z]([a-zA-Z0-9_])*
