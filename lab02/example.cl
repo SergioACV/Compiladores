@@ -1,12 +1,12 @@
 class A{
-    hola: Int <- jaja;
-    hi: Bool <- not false;
-    hi: Bool <- (new String) ;
+    hola: Int <- 2<2;
+    hi: Bool <- ~ 2=2;
+    hi: Bool <- 2<=1 ;
     
 };
 
 Class BB_ inherits A {
-    salut: Int <- 1;
+    salut: Int <-2-21;
     abiento: Int <- "Sergio";
     hi: Bool <- isvoid sergio;
     

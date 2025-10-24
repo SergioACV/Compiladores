@@ -141,7 +141,11 @@
     //%type <expressions> expression_list
     
     /* Precedence declarations go here. */
-  
+    
+    /* It has more precedence if lower */
+    %nonassoc LE '<' '='	/* comparisons are non associative, it is not possible to encadenate them. */
+    %left '+' '-'    /* Arithemtic is done left to right */
+    %left '*' '/'    /* Arithemtic is done left to right */
     
     %%
     /* 
@@ -275,6 +279,53 @@
       | ISVOID expression
         {
           $$ = isvoid($2);
+        }
+
+      /* sum expression */
+      | expression '+' expression
+       {
+        $$ = plus($1,$3);
+       }
+
+      /* substract expression */
+      | expression '-' expression
+        {
+          $$ = sub($1,$3);
+        }
+
+      /* multiplication expression */
+      | expression '*' expression
+        {
+          $$ = mul($1,$3);
+        }
+
+
+      /* division expression */
+      | expression '/' expression
+        {
+          $$ = divide($1,$3);
+        }
+
+      /* arithmetic negation */
+      | '~' expression
+		    { 
+          $$ = neg($2); 
+        }
+
+      /* comparisons */
+      | expression '<' expression
+        {
+          $$ = lt($1,$3);
+        }
+
+      | expression LE expression
+       {
+         $$ = leq($1,$3);
+       }
+
+      | expression '=' expression
+        {
+          $$ = eq($1,$3);
         }
 
       /* negate expression */
