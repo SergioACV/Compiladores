@@ -141,7 +141,7 @@
     //%type <expressions> expression_list
     
     /* Precedence declarations go here. */
-    
+  
     
     %%
     /* 
@@ -216,24 +216,24 @@
         }
 
       /* Method with arguments */
-      | OBJECTID "(" formal_list  ")" ":" TYPEID "{" expression "}" ";"
+      | OBJECTID "(" formal_list  ")" ':' TYPEID "{" expression "}" ';'
         {
           $$ = method($1, $3, $6, $8);
         }
 
-
-      /* Attribute on class without initializatrion */
-      | OBJECTID ':' TYPEID ';'
-        	{ $$ = attr($1, $3, no_expr());}
-
-      
       /* Attribute on class with expression */
-      | OBJECTID ':' TYPEID ASSIGN expression ";"
+      | OBJECTID ':' TYPEID ASSIGN expression ';'
         {
           $$ = attr($1, $3, $5);
         }
+     
+
+      /* Attribute on class without initialization */
+      | OBJECTID ':' TYPEID ';'
+        	{ 
+            $$ = attr($1, $3, no_expr());
+          }
       ;
-   
 
     formal_list:
       /* unique argument */
@@ -257,10 +257,62 @@
         }
       ;
 
-    expression: 
-      OBJECTID
+    expression:
+
+      /* Objectid aasign to expression*/
+      OBJECTID ASSIGN expression
+       {
+        $$ = assign($1, $3);
+       }
+
+      /* new type */
+      | NEW TYPEID 
+        {
+          $$ = new_($2);
+        }
+
+      /* is void expression */
+      | ISVOID expression
+        {
+          $$ = isvoid($2);
+        }
+
+      /* negate expression */
+      | NOT expression 
+        {
+          $$ = comp($2);
+        }
+
+      /* expression in parenthesis */
+      | '(' expression ')'
+        {
+           $$ = $2;
+        }
+
+      /* Just an object id --variables */ 
+      | OBJECTID
         {
           $$ = object($1);
+        }
+      
+      /* integer */
+      | INT_CONST
+        {
+          $$ = int_const($1);
+        }
+      
+
+      /* string constant */
+      | STR_CONST 
+        {
+          $$ = string_const($1);
+        }
+      
+
+      /* bool_constant */
+      | BOOL_CONST
+        {
+          $$ =  bool_const($1);
         }
       ;
     
