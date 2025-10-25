@@ -138,7 +138,9 @@
     %type <formal> formal
     %type <formals> formal_list
     %type <expression> expression
-    //%type <expressions> expression_list
+    %type <expressions> expression_list
+    %type <expressions> block_list  //block of expressions
+
     
     /* Precedence declarations go here. */
     
@@ -214,13 +216,13 @@
 
     feature: 
       /* Method with no arguments */
-      OBJECTID "(" ")" ":" TYPEID "{" expression "}" ";"
+      OBJECTID '(' ')' ':' TYPEID '{' expression '}' ';'
         {
           $$ = method($1, nil_Formals(), $5, $7);
         }
 
       /* Method with arguments */
-      | OBJECTID "(" formal_list  ")" ':' TYPEID "{" expression "}" ';'
+      | OBJECTID '(' formal_list  ')' ':' TYPEID '{' expression '}' ';'
         {
           $$ = method($1, $3, $6, $8);
         }
@@ -268,6 +270,65 @@
        {
         $$ = assign($1, $3);
        }
+
+      /* Call function of object/expression with no arguments */
+      | expression '.' OBJECTID '(' ')'
+        {
+          $$ = dispatch($1,$3,nil_Expressions());
+        }
+
+      /* Call function of object/expression with  arguments */
+      | expression '.' OBJECTID '(' expression_list ')'
+        {
+          $$ = dispatch($1,$3,$5);
+        }
+
+      /* Call statics methods */
+
+      /* Call static function of object/expression of father class with no arguments */
+      | expression  '@' TYPEID '.' OBJECTID '(' ')'
+        {
+          $$ = static_dispatch($1,$3,$5,nil_Expressions());
+        }
+
+      /* Call static function of object/expression of father class with  arguments */
+      | expression '@' TYPEID  '.' OBJECTID '(' expression_list ')'
+        {
+          $$ = static_dispatch($1,$3,$5,$7);
+        }
+
+
+      /* call function without arguments and on self  */
+      | OBJECTID '(' ')'
+        {
+          $$ = dispatch(object(idtable.add_string("self")),$1,nil_Expressions());
+        }
+      
+
+      /* call function on self with arguments */
+      | OBJECTID '(' expression_list ')'
+        {
+          $$ = dispatch(object(idtable.add_string("self")),$1,$3);
+        }
+
+      /* IF expression */
+      | IF expression THEN expression ELSE expression FI
+        { 
+          $$ = cond($2, $4, $6); 
+        }
+
+      /* while expression */
+      | WHILE expression LOOP expression POOL
+        {
+          { $$ = loop($2, $4); }
+        }
+
+      /* expression list/block */
+      | '{' block_list '}'
+        {
+          $$ = block($2);
+        }
+
 
       /* new type */
       | NEW TYPEID 
@@ -366,6 +427,33 @@
           $$ =  bool_const($1);
         }
       ;
+    
+    block_list:
+      /* Unique expression */
+      expression ';'
+        {
+          $$ =  single_Expressions($1);
+        }
+
+      /* several expressions all finished by ; */
+      | block_list expression ';' {
+        $$ = append_Expressions($1,single_Expressions($2));
+      }
+
+    expression_list:
+      /* unique expression */
+      expression
+        {
+          $$ =  single_Expressions($1);
+        }
+      
+      /* Several expressions separed by commas */
+      | expression_list ',' expression
+        {
+          $$ = append_Expressions($1,single_Expressions($3));
+        }
+      ;
+
     
     /* end of grammar */
     %%
