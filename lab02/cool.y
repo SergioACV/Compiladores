@@ -138,6 +138,7 @@
     %type <formal> formal
     %type <formals> formal_list
     %type <expression> expression
+    //%type <expression> let_expression
     %type <expressions> expression_list
     %type <expressions> block_list 
     %type <case_> case  
@@ -250,7 +251,7 @@
         }
       
       /* several arguments */
-      | formal "," formal_list
+      | formal ',' formal_list
         {
           $$ = append_Formals(single_Formals($1),$3);
         }
@@ -258,7 +259,7 @@
 
 
     formal: 
-      OBJECTID ":" TYPEID 
+      OBJECTID ':' TYPEID 
         {
            $$ = formal($1, $3);
         }
@@ -329,6 +330,10 @@
         {
           $$ = block($2);
         }
+
+      /* let expression 
+      | let_expression
+      */
 
       /* Case structure */
       | CASE expression OF case_list ESAC
@@ -481,7 +486,6 @@
           $$ = append_Cases($1, single_Cases($2));
         }
       ;
-
     
     /* end of grammar */
     %%
