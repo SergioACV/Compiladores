@@ -139,9 +139,10 @@
     %type <formals> formal_list
     %type <expression> expression
     %type <expressions> expression_list
-    %type <expressions> block_list  //block of expressions
+    %type <expressions> block_list 
+    %type <case_> case  
+    %type <cases> case_list 
 
-    
     /* Precedence declarations go here. */
     
     /* It has more precedence if lower */
@@ -329,6 +330,12 @@
           $$ = block($2);
         }
 
+      /* Case structure */
+      | CASE expression OF case_list ESAC
+        {
+          $$ = typcase($2, $4); 
+        }
+
 
       /* new type */
       | NEW TYPEID 
@@ -451,6 +458,27 @@
       | expression_list ',' expression
         {
           $$ = append_Expressions($1,single_Expressions($3));
+        }
+      ;
+
+    case:
+      OBJECTID ':' TYPEID DARROW expression
+        {
+          $$ = branch($1, $3, $5);
+        }
+      ;
+    
+    case_list:
+      /* unique case */
+      case ';'
+        {
+          $$ = single_Cases($1);
+        }
+      
+      /* several cases */
+      | case_list case ';'
+        {
+          $$ = append_Cases($1, single_Cases($2));
         }
       ;
 
