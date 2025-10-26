@@ -133,20 +133,25 @@
     %type <program> program
     %type <classes> class_list
     %type <class_> class
+
     %type <feature> feature
     %type <features> feature_list 
+
     %type <formal> formal
     %type <formals> formal_list
+
     %type <expression> expression
-    //%type <expression> let_expression
     %type <expressions> expression_list
+    %type <expression> let_expression
     %type <expressions> block_list 
+
     %type <case_> case  
     %type <cases> case_list 
 
     /* Precedence declarations go here. */
     
     /* It has more precedence if lower */
+    %right LET_REDUCE
     %nonassoc LE '<' '='	/* comparisons are non associative, it is not possible to encadenate them. */
     %left '+' '-'    /* Arithemtic is done left to right */
     %left '*' '/'    /* Arithemtic is done left to right */
@@ -341,9 +346,11 @@
           $$ = block($2);
         }
 
-      /* let expression 
-      | let_expression
-      */
+      /* let expression */
+      | LET let_expression
+        {
+          $$ = $2;
+        }
 
       /* Case structure */
       | CASE expression OF case_list ESAC
@@ -493,6 +500,7 @@
       ;
     
     case_list:
+
       /* unique case */
       case ';'
         {
@@ -505,7 +513,31 @@
           $$ = append_Cases($1, single_Cases($2));
         }
       ;
-    
+
+    let_expression:
+      OBJECTID ':' TYPEID IN expression %prec LET_REDUCE
+        {
+          $$ = let($1, $3, no_expr(), $5);
+        }
+
+      | OBJECTID ':' TYPEID ASSIGN expression IN expression %prec LET_REDUCE
+        {
+          $$ = let($1, $3, $5, $7);
+        }
+
+      | OBJECTID ':' TYPEID ',' let_expression
+        {
+          $$ = let($1, $3, no_expr(), $5);
+        }
+
+      
+      | OBJECTID ':' TYPEID ASSIGN expression ',' let_expression
+        {
+          $$ = let($1, $3, $5, $7);
+        }
+
+      ;
+
     /* end of grammar */
     %%
     
