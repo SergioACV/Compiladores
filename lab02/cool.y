@@ -172,6 +172,11 @@
           $$ = append_Classes($1,single_Classes($2)); 
           parse_results = $$; 
         }
+      
+      | error ';'
+        {
+          $$ = nil_Classes();
+        }
     ;
     
     /* If no parent is specified, the class inherits from the Object class. */
@@ -212,6 +217,11 @@
         {
           $$ = append_Features($1,single_Features($2));
           
+        }
+
+      | error ';'
+        {
+          $$ = nil_Features();
         }
       ;
     
@@ -438,6 +448,7 @@
         {
           $$ =  bool_const($1);
         }
+
       ;
     
     block_list:
@@ -451,6 +462,14 @@
       | block_list expression ';' {
         $$ = append_Expressions($1,single_Expressions($2));
       }
+     
+      /* el bloque está vacio */
+      | error ';'
+        {
+          $$ = nil_Expressions(); 
+        }
+
+      ;
 
     expression_list:
       /* unique expression */
