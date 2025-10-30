@@ -151,11 +151,17 @@
     /* Precedence declarations go here. */
     
     /* It has more precedence if lower */
-    %right LET_REDUCE
-    %nonassoc LE '<' '='	/* comparisons are non associative, it is not possible to encadenate them. */
-    %left '+' '-'    /* Arithemtic is done left to right */
-    %left '*' '/'    /* Arithemtic is done left to right */
-    
+    %right ASSIGN			// assign is right associative
+    %left NOT				// binary operators are left associative
+    %nonassoc LE '<' '='	// comparisons are non associative
+    %left '+' '-'
+    %left '*' '/'
+    %left ISVOID
+    %left '~'
+    %left '@'
+    %left '.'
+    %left '('
+
     %%
     /* 
     Save the root of the abstract syntax tree in a global variable.
