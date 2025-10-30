@@ -1,0 +1,7 @@
+https://github.com/jmoyers/cool-lexer/blob/master/cool.flex
+https://github.com/marczalik/Cool-Lexer/blob/main/cool.flex
+https://github.com/vinceniko/cool-compiler/blob/master/pa2-submission/cool.flex
+https://github.com/isuridevindi/co521-cool-compiler/blob/main/1_Lexical%20Analyser/cool.flex
+
+Nuestro repositorio: 
+https://github.com/SergioACV/Compiladores.git
