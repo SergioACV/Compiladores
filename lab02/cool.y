@@ -496,6 +496,7 @@
         {
           $$ = append_Expressions($1,single_Expressions($3));
         }
+        
       ;
 
     case:
@@ -521,12 +522,12 @@
       ;
 
     let_expression:
-      OBJECTID ':' TYPEID IN expression %prec LET_REDUCE
+      OBJECTID ':' TYPEID IN expression
         {
           $$ = let($1, $3, no_expr(), $5);
         }
 
-      | OBJECTID ':' TYPEID ASSIGN expression IN expression %prec LET_REDUCE
+      | OBJECTID ':' TYPEID ASSIGN expression IN expression 
         {
           $$ = let($1, $3, $5, $7);
         }
@@ -541,6 +542,21 @@
         {
           $$ = let($1, $3, $5, $7);
         }
+
+       /* Error en expresión de inicialización */
+      | OBJECTID ':' TYPEID ASSIGN error ',' let_expression
+          {
+            yyerrok; // limpia el estado de error
+            $$ = let($1, $3, no_expr(), $7);
+          }
+
+        /* Error en el cuerpo final después de IN */
+      | OBJECTID ':' TYPEID ASSIGN error IN expression
+          {
+            yyerrok;
+            $$ = let($1, $3, no_expr(), $7);
+          }
+      
 
       ;
 
