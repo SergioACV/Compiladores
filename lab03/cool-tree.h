@@ -136,6 +136,9 @@ public:
    Program copy_Program();
    void dump(ostream& stream, int n);
 
+   //get classes
+   Classes get_classes() { return classes; }
+
 #ifdef Program_SHARED_EXTRAS
    Program_SHARED_EXTRAS
 #endif
@@ -161,6 +164,9 @@ public:
    }
    Class_ copy_Class_();
    void dump(ostream& stream, int n);
+
+   //addd get parent
+   Symbol get_parent() { return parent; }
 
 #ifdef Class__SHARED_EXTRAS
    Class__SHARED_EXTRAS
