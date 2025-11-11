@@ -6,6 +6,9 @@
 #include "semant.h"
 #include "utilities.h"
 
+#include <vector>
+#include <map>
+
 
 extern int semant_debug;
 extern char *curr_filename;
@@ -84,7 +87,7 @@ static void initialize_constants(void)
 
 
 ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) {
-
+    this->install_basic_classes();
     /* Fill this in */
 
 }
@@ -188,7 +191,99 @@ void ClassTable::install_basic_classes() {
 						      Str, 
 						      no_expr()))),
 	       filename);
+    
+    //add basic classes to class map
+    class_map[Object] = Object_class;
+    class_map[IO] = IO_class;
+    class_map[Int] = Int_class;
+    class_map[Bool] = Bool_class;
+    class_map[Str] = Str_class;
+
 }
+
+void ClassTable::create_class_map(Classes classes) {
+    //TO DO: create class map from class name to class_
+
+    for ( int i = classes->first(); classes->more(i); i = classes->next(i) ) {
+        Class_ c = classes->nth(i);
+        class_map[c->get_name()] = c;
+
+        //cout << "Class added: " << c->get_name() << endl;
+
+        
+    }
+}
+
+bool ClassTable::build_inheritance_graph() {
+    //TO DO: build inheritance graph using map and vector
+    
+    for (std::map<Symbol, Class_>::iterator it = class_map.begin(); it != class_map.end(); ++it) {
+        Symbol class_name = it->first;
+        Class_ c = it->second;
+        Symbol parent_name = c->get_parent();
+
+        if (parent_name == No_class) continue;
+
+        inheritance_graph[parent_name].push_back(class_name);
+
+        //detect cycles
+        if (parent_name == class_name) {
+            semant_error(c) << "Class " << class_name << " cannot inherit from itself." << endl;
+            return false;
+        }
+
+        //cout << "Class " << class_name << " inherits from " << parent_name << endl;
+    }
+
+    return true;
+}
+
+bool ClassTable::isCyclicUtil(
+      std::map<Symbol, std::vector<Symbol> >& adj,
+      Symbol v,
+      std::map<Symbol, bool>& visited,
+      std::map<Symbol, bool>& recStack
+) {
+    if (recStack[v]) return true;
+    if (visited[v]) return false;
+
+    visited[v] = true;
+    recStack[v] = true;
+
+    // Usar C++98 iterador
+    for (std::vector<Symbol>::iterator it = adj[v].begin(); it != adj[v].end(); ++it) {
+        if (isCyclicUtil(adj, *it, visited, recStack)) {
+            return true;
+        }
+    }
+
+    recStack[v] = false;
+    return false;
+}
+
+
+
+
+bool ClassTable::detect_cycles() {
+    //get nuymber of classes
+    int num_classes = class_map.size();
+    //create visisted vector
+    std::map<Symbol, bool> visited;
+    std::map<Symbol, bool> recStack;
+    //check for cycles in each component
+    for (std::map<Symbol, Class_>::iterator it = class_map.begin(); it != class_map.end(); ++it) {
+        Symbol class_name = it->first;
+        if (!visited[class_name]) {
+            if (isCyclicUtil(inheritance_graph, class_name, visited, recStack)) {
+                semant_error(it->second) << "Inheritance cycle detected involving class " << class_name << endl;
+                return true;
+            }
+        }
+    }
+    cout << "No cycles detected in inheritance graph." << endl;
+    return false;
+}
+
 
 ////////////////////////////////////////////////////////////////////
 //
@@ -243,6 +338,18 @@ void program_class::semant()
 
     /* ClassTable constructor may do some semantic analysis */
     ClassTable *classtable = new ClassTable(classes);
+
+    /* create class map*/
+    classtable->create_class_map(classes);
+    /* create classes graph*/
+    classtable->build_inheritance_graph();
+
+    /* detect cycles*/
+    classtable->detect_cycles();
+
+    //print classes
+    
+
 
     /* some semantic analysis code may go here */
 
