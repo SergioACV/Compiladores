@@ -5,3 +5,6 @@ https://github.com/isuridevindi/co521-cool-compiler/blob/main/1_Lexical%20Analys
 
 Nuestro repositorio: 
 https://github.com/SergioACV/Compiladores.git
+
+Para el lab3:
+https://github.com/gboduljak/stanford-compilers-coursework/blob/master/assignments/PA4/semant.cc#L326
