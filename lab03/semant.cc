@@ -333,6 +333,44 @@ bool ClassTable::walk_formals(Formals formals) {
 
 bool ClassTable::walk_expression(Expression expr) {
     
+    //let_expression: use dynamic cast to check type
+    if (let_class* let_expr = dynamic_cast<let_class*>(expr)) {
+        
+    }
+
+    //assign_expression: use dynamic cast to check type
+    else if (assign_class* assign_expr = dynamic_cast<assign_class*>(expr)) {
+        
+    }
+
+    //dispatch_expression: use dynamic cast to check type
+    else if (dispatch_class* dispatch_expr = dynamic_cast<dispatch_class*>(expr)) {
+        
+    }
+
+    //static_dispatch_expression: use dynamic cast to check type
+    else if (static_dispatch_class* static_dispatch_expr = dynamic_cast<static_dispatch_class*>(expr)) {
+        
+    }
+
+
+    //cond_expression: use dynamic cast to check type
+    else if (cond_class* cond_expr = dynamic_cast<cond_class*>(expr)) {
+        
+    }
+
+    //loop_expression: use dynamic cast to check type
+    else if (loop_class* loop_expr = dynamic_cast<loop_class*>(expr)) {
+        
+    }
+
+    //typcase_expression: use dynamic cast to check type
+    else if (typcase_class* typcase_expr = dynamic_cast<typcase_class*>(expr)) {
+        
+    }
+
+    
+
 
     return true;
 }
