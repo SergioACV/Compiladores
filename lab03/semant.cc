@@ -5,13 +5,15 @@
 #include <stdarg.h>
 #include "semant.h"
 #include "utilities.h"
-
+#include <symtab.h>
 #include <vector>
 #include <map>
 
 
 extern int semant_debug;
 extern char *curr_filename;
+
+SymbolTable<Symbol,Symbol> *objects_table;
 
 //////////////////////////////////////////////////////////////////////
 //
@@ -204,14 +206,40 @@ void ClassTable::install_basic_classes() {
 void ClassTable::create_class_map(Classes classes) {
     //TO DO: create class map from class name to class_
 
+
     for ( int i = classes->first(); classes->more(i); i = classes->next(i) ) {
         Class_ c = classes->nth(i);
         class_map[c->get_name()] = c;
 
-        //cout << "Class added: " << c->get_name() << endl;
 
         
     }
+}
+
+bool ClassTable::is_main_class_defined() {
+    //TO DO: check if Main class is defined
+    if (class_map.find(Main) == class_map.end()) {
+        semant_error() << "Main class is not defined." << endl;
+        return false;
+    }
+    return true;
+}
+
+//check if all classes hereda from an existing class
+bool ClassTable::check_inheritance_exists() {
+    
+    //iterate over class map
+    for (std::map<Symbol, Class_>::iterator it = class_map.begin(); it != class_map.end(); ++it) {
+        Symbol parent_name = it->second->get_parent();
+        //check if parent exists in class map
+        if (parent_name != No_class && class_map.find(parent_name) == class_map.end()) {
+            semant_error(it->second) << "Class " << it->first << " inherits from an undefined class " << parent_name << endl;
+            return false;   
+        }
+
+    }
+    cout << "All classes inherit from existing classes." << endl;
+    return true;
 }
 
 bool ClassTable::build_inheritance_graph() {
@@ -226,7 +254,7 @@ bool ClassTable::build_inheritance_graph() {
 
         inheritance_graph[parent_name].push_back(class_name);
 
-        //detect cycles
+        //cannot inherit from itself
         if (parent_name == class_name) {
             semant_error(c) << "Class " << class_name << " cannot inherit from itself." << endl;
             return false;
@@ -261,9 +289,6 @@ bool ClassTable::isCyclicUtil(
     return false;
 }
 
-
-
-
 bool ClassTable::detect_cycles() {
     //get nuymber of classes
     int num_classes = class_map.size();
@@ -284,7 +309,91 @@ bool ClassTable::detect_cycles() {
     return false;
 }
 
+bool ClassTable::walk_ast_starting_with_classes() {
+    //TO DO: walk the AST starting with class c
+    //iterate over class map
+    //cout << "Walking AST starting with classes..." << endl;
+    for (std::map<Symbol, Class_>::iterator it = class_map.begin(); it != class_map.end(); ++it) {
+        Class_ c = it->second;
+        walk_ast_starting_with_class(c);
 
+    }
+    return true;
+}
+
+bool ClassTable::walk_formals(Formals formals) {
+    //iterate over formals
+    for ( int i = formals->first(); formals->more(i); i = formals->next(i) ) {
+        Formal formal = formals->nth(i);
+        //add formal to symbol table
+        objects_table->addid(formal->get_name(), new Symbol(formal->get_type()));
+    }
+    return true;
+}
+
+bool ClassTable::walk_expression(Expression expr) {
+    
+
+    return true;
+}
+
+
+bool ClassTable::walk_method(Feature f) {
+    method_class* method = dynamic_cast<method_class*>(f);
+    
+    //enter scope
+    objects_table->enterscope();
+    //add formals to symbol table
+    Formals formals = method->get_formals();
+    walk_formals(formals);
+    //TO DO: process method body expression
+    Expression body = method->get_body_expr();
+    walk_expression(body);
+
+    //exit scope
+    objects_table->exitscope();
+
+
+    return true;
+    
+}
+
+bool ClassTable::walk_attr(Feature f) {
+
+    attr_class* attr = dynamic_cast<attr_class*>(f);
+    objects_table->addid(attr->get_name(), new Symbol(attr->get_type()));
+    return true;
+}
+
+bool ClassTable::walk_ast_starting_with_class(Class_ c) {
+    //enter scope
+    objects_table = new SymbolTable<Symbol, Symbol>();
+
+    objects_table->enterscope();
+    //class has list of features 
+    Features features = c->get_features();
+    //iterate over features
+
+    for ( int i = features->first(); features->more(i); i = features->next(i) ) {
+        Feature f = features->nth(i);
+        //add feature to class_featuers_map
+        
+        //if feature is attribute, add to symbol table
+        if (f->is_attr()) {
+            class_attrs_map[c->get_name()].push_back(f);
+            walk_attr(f);
+        } else if (f->is_method()) {
+            class_methods_map[c->get_name()].push_back(f);
+            walk_method(f);
+        }
+
+    
+    }
+
+    //exit scope
+    objects_table->exitscope();
+    return true;
+}
 ////////////////////////////////////////////////////////////////////
 //
 // semant_error is an overloaded function for reporting errors
@@ -341,13 +450,21 @@ void program_class::semant()
 
     /* create class map*/
     classtable->create_class_map(classes);
+
+    /* check if Main class is defined*/
+    classtable->is_main_class_defined();
+
+    /* check if inheritance exists*/
+    classtable->check_inheritance_exists();
+
     /* create classes graph*/
     classtable->build_inheritance_graph();
 
     /* detect cycles*/
     classtable->detect_cycles();
 
-    //print classes
+    /* walk*/
+    classtable->walk_ast_starting_with_classes();
     
 
 
