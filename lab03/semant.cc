@@ -370,16 +370,59 @@ bool ClassTable::detect_cycles() {
     return false;
 }
 
-bool ClassTable::walk_ast_starting_with_classes() {
-    //TO DO: walk the AST starting with class c
-    //iterate over class map
-    //cout << "Walking AST starting with classes..." << endl;
+bool ClassTable::walk_ast_to_register_methods_and_attributes() {
     for (std::map<Symbol, Class_>::iterator it = class_map.begin(); it != class_map.end(); ++it) {
         Class_ c = it->second;
-        walk_ast_starting_with_class(c);
-
-    }
+        register_class_and_its_methods(c);
+    } 
     return true;
+}
+
+void ClassTable::register_class_and_its_methods(Class_ class_definition) {
+    class_methods[class_definition->get_name()] = get_class_methods(class_definition);
+    class_attrs[class_definition->get_name()] = get_class_attributes(class_definition);
+}
+
+std::map<Symbol, method_class*> ClassTable::get_class_methods(Class_ class_definition) {
+    std::map<Symbol, method_class*> class_methods;
+    Features class_features = class_definition->get_features();
+
+    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) {
+        Feature feature = class_features->nth(i);
+
+        if (!feature->is_method())
+            continue;
+
+        method_class* method = static_cast<method_class*>(feature);
+        Symbol method_name = method->get_name();
+
+        // Comprobación de duplicados
+        if (class_methods.find(method_name) != class_methods.end()) {
+            semant_error(class_definition) << "The method " << method_name << " has already been defined!\n";
+        } else {
+            class_methods[method_name] = method;
+        }
+    }
+
+    return class_methods;
+}
+
+std::map<Symbol, attr_class*> ClassTable::get_class_attributes(Class_ class_definition) {
+    std::map<Symbol, attr_class*> class_attrs;
+    Features class_features = class_definition->get_features();
+
+    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) {
+        Feature feature = class_features->nth(i);
+
+        if (!feature->is_attr())
+            continue;
+
+        attr_class* attr = static_cast<attr_class*>(feature);
+        Symbol attr_name = attr->get_name();
+        class_attrs[attr_name] = attr;
+    }
+
+    return class_attrs;
 }
 
 bool ClassTable::walk_formals(Formals formals) {
@@ -457,42 +500,7 @@ bool ClassTable::walk_method(Feature f) {
     
 }
 
-bool ClassTable::walk_attr(Feature f) {
 
-    attr_class* attr = dynamic_cast<attr_class*>(f);
-    objects_table->addid(attr->get_name(), new Symbol(attr->get_type()));
-    return true;
-}
-
-bool ClassTable::walk_ast_starting_with_class(Class_ c) {
-    //enter scope
-    objects_table = new SymbolTable<Symbol, Symbol>();
-
-    objects_table->enterscope();
-    //class has list of features 
-    Features features = c->get_features();
-    //iterate over features
-
-    for ( int i = features->first(); features->more(i); i = features->next(i) ) {
-        Feature f = features->nth(i);
-        //add feature to class_featuers_map
-        
-        //if feature is attribute, add to symbol table
-        if (f->is_attr()) {
-            class_attrs_map[c->get_name()].push_back(f);
-            walk_attr(f);
-        } else if (f->is_method()) {
-            class_methods_map[c->get_name()].push_back(f);
-            walk_method(f);
-        }
-
-    
-    }
-
-    //exit scope
-    objects_table->exitscope();
-    return true;
-}
 ////////////////////////////////////////////////////////////////////
 //
 // semant_error is an overloaded function for reporting errors
@@ -550,11 +558,11 @@ void program_class::semant()
     /* create class map*/
     classtable->create_class_map(classes);
 
-    /* check if Main class is defined*/
-    classtable->is_main_class_defined();
-
     /* check if inheritance exists*/
     classtable->check_inheritance_exists();
+
+    /* check if Main class is defined*/
+    classtable->is_main_class_defined();
 
     /* create classes graph*/
     classtable->build_inheritance_graph();
@@ -563,10 +571,8 @@ void program_class::semant()
     classtable->detect_cycles();
 
     /* walk*/
-    classtable->walk_ast_starting_with_classes();
+    classtable->walk_ast_to_register_methods_and_attributes();
     
-
-
     /* some semantic analysis code may go here */
 
     if (classtable->errors()) {
