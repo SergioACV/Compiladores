@@ -33,6 +33,8 @@ private:
     std::map<Symbol, std::vector<Feature> > class_attrs_map;
   //symbol table to store attributes of current class during ast walk
   std::map<Symbol, std::vector<Symbol> > inheritance_graph; 
+  // mapa para guardar el tipo padre de cada clase
+  std::map<Symbol, Symbol> parent_type_of;
 
 public:
   ClassTable(Classes);

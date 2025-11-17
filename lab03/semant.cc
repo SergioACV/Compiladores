@@ -264,19 +264,64 @@ bool ClassTable::build_inheritance_graph() {
     //TO DO: build inheritance graph using map and vector
     
     for (std::map<Symbol, Class_>::iterator it = class_map.begin(); it != class_map.end(); ++it) {
+        // get key of element of the map
         Symbol class_name = it->first;
-        Class_ c = it->second;
-        Symbol parent_name = c->get_parent();
+        
+        //skip Object class
+        if (class_name == Object)
+            continue;
+
+        // Se obtiene el valor asociado a la llave de tipo Class
+        Class_ class_definition = it->second;
+
+        // Se obtiene el nombre de la clase padre
+        Symbol parent_name = class_definition->get_parent();
 
         if (parent_name == No_class) continue;
 
-        inheritance_graph[parent_name].push_back(class_name);
+        // Se asocia la clase a su padre
+        parent_type_of[class_name] = parent_name;
+
+        //check if parent is a basic class, Not allowed
+        if( 
+            parent_name == Str ||  
+            parent_name == Int || 
+            parent_name == Bool ||
+            parent_name == SELF_TYPE
+        )
+        {
+            this->semant_error(class_definition)
+                << "Class "
+                << class_definition->get_name()
+                << " cannot inherit class "
+                << class_parent_name
+                << ".\n";
+            return false;
+        }
+
+        //check if parent exists in class map
+        if (this->class_map.find(parent_name) == this->class_map.end())
+        {
+            semant_error(x.second) << "Class "
+                << class_name 
+                << " inherits from an undefined class "
+                << parent_name
+                << ".\n";
+            return false;
+        }
 
         //cannot inherit from itself
         if (parent_name == class_name) {
             semant_error(c) << "Class " << class_name << " cannot inherit from itself." << endl;
             return false;
         }
+
+        // Initialize the adjacency list for parent if not already present
+        if (this->inheritance_graph.find(parent_name) == this->inheritance_graph.end()) {
+            this->inheritance_graph[parent_name] = std::vector<Symbol>();
+        }
+        
+        inheritance_graph[parent_name].push_back(class_name);
 
         //cout << "Class " << class_name << " inherits from " << parent_name << endl;
     }
