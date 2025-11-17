@@ -204,14 +204,32 @@ void ClassTable::install_basic_classes() {
 }
 
 void ClassTable::create_class_map(Classes classes) {
-    //TO DO: create class map from class name to class_
-
-
     for ( int i = classes->first(); classes->more(i); i = classes->next(i) ) {
-        Class_ c = classes->nth(i);
-        class_map[c->get_name()] = c;
-
-
+        Class_ actual_class = classes->nth(i);
+        Symbol class_name = actual_class->get_name();
+        
+        // Si la clase es una de las basicas, reportar error
+        if (
+            class_name == Int    ||
+            class_name == Bool   ||
+            class_name == Str    ||
+            class_name == Object ||
+            class_name == SELF_TYPE
+        ) 
+        {
+            semant_error(actual_class) << "Redefinition of " << class_name << " is not allowed. \n";
+            return false;
+        }
+        // Si la clase ya fue definida, reportar error
+        else if (this->class_lookup.find(class_name) != this->class_lookup.end())
+        {
+            semant_error(actual_class) << "Class " << class_name << " was previously defined.\n";
+            return false;
+        }
+        else
+            this->class_lookup[class_name] = actual_class;
+ 
+        class_map[actual_class->get_name()] = actual_class;
         
     }
 }
