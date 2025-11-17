@@ -218,16 +218,14 @@ void ClassTable::create_class_map(Classes classes) {
         ) 
         {
             semant_error(actual_class) << "Redefinition of " << class_name << " is not allowed. \n";
-            return false;
         }
         // Si la clase ya fue definida, reportar error
-        else if (this->class_lookup.find(class_name) != this->class_lookup.end())
+        else if (this->class_map.find(class_name) != this->class_map.end())
         {
             semant_error(actual_class) << "Class " << class_name << " was previously defined.\n";
-            return false;
         }
         else
-            this->class_lookup[class_name] = actual_class;
+            this->class_map[class_name] = actual_class;
  
         class_map[actual_class->get_name()] = actual_class;
         
@@ -294,7 +292,7 @@ bool ClassTable::build_inheritance_graph() {
                 << "Class "
                 << class_definition->get_name()
                 << " cannot inherit class "
-                << class_parent_name
+                << parent_name
                 << ".\n";
             return false;
         }
@@ -302,7 +300,7 @@ bool ClassTable::build_inheritance_graph() {
         //check if parent exists in class map
         if (this->class_map.find(parent_name) == this->class_map.end())
         {
-            semant_error(x.second) << "Class "
+            semant_error(it->second) << "Class "
                 << class_name 
                 << " inherits from an undefined class "
                 << parent_name
@@ -312,7 +310,7 @@ bool ClassTable::build_inheritance_graph() {
 
         //cannot inherit from itself
         if (parent_name == class_name) {
-            semant_error(c) << "Class " << class_name << " cannot inherit from itself." << endl;
+            semant_error(class_name) << "Class " << class_name << " cannot inherit from itself." << endl;
             return false;
         }
 

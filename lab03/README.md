@@ -30,41 +30,119 @@ El proceso de creación del mapa de clases incluye las siguientes etapas:
 El método `create_class_map` se invoca dentro del método `program_class::semant()`, que es el punto de entrada principal para el análisis semántico. Aquí se muestra cómo se utiliza:
 
 
-Objetivo del Método build_inheritance_graph()
+# Método `build_inheritance_graph`
 
-El método build_inheritance_graph() tiene como objetivo construir el grafo de herencia de un programa COOL. Este grafo representa las relaciones jerárquicas entre las clases y sus clases base. Además, el método realiza verificaciones para asegurar que las clases estén correctamente definidas y no haya herencias inválidas.
+Este documento describe el funcionamiento del método `build_inheritance_graph()` dentro de la estructura `ClassTable` del analizador semántico de COOL.  
+Su responsabilidad principal es construir el **grafo de herencia** del programa y verificar que la jerarquía de clases sea **válida y bien formada**.
 
-Proceso General
+---
 
-Recorrido de las clases: El método itera sobre todas las clases definidas en el programa utilizando un contenedor (class_lookup), que mapea los nombres de las clases a sus definiciones.
+## Objetivo del método `build_inheritance_graph()`
 
-Comprobación de la clase base: Para cada clase, se obtiene el nombre de su clase base.
+El método `build_inheritance_graph()` construye el grafo de herencia de un programa COOL, donde se representan las relaciones jerárquicas entre las clases y sus clases base.  
+Además, realiza verificaciones semánticas para asegurar que:
 
-Verificación de herencia válida:
+- Todas las clases hereden de clases **definidas**.
+- No se herede de clases **prohibidas** (como `Int`, `Bool`, `String`, `SELF_TYPE`, según las reglas de COOL).
+- No existan **ciclos de herencia**.
+- La jerarquía sea **consistente** y utilizable en etapas posteriores del análisis semántico (tipos, métodos, etc.).
 
-Se asegura de que la clase base esté definida en el programa.
+---
 
-Se verifica que la clase base no sea una clase predefinida (como Str, Int, Bool, SELF_TYPE), que no se permite heredar.
+## Proceso general del método
 
-Construcción del grafo de herencia: El método crea un grafo donde cada clase base es una clave y las clases que heredan de ella son los valores (en un vector).
+De forma simplificada, `build_inheritance_graph()` sigue estos pasos:
 
-Registro de errores: Si se detecta alguna condición inválida (como herencia cíclica, herencia de una clase no definida, o herencia de clases no permitidas), el método lanza un error y detiene la ejecución.
+1. **Recorrido de las clases**
 
-Cómo Funciona el Grafo de Herencia
+   Recorre todas las clases definidas en el programa utilizando una estructura como `class_lookup`, que mapea:
 
-El grafo de herencia se almacena en un mapa (inheritance_graph), donde:
+   ```cpp
+   Symbol  ->  Class_ (definición de la clase)
+Obtención de la clase base
+
+Para cada clase se obtiene el nombre de su clase padre (base), normalmente algo como:
+
+cpp
+Copiar código
+Symbol parent_name = cls->get_parent();
+Verificación de herencia válida
+
+Para cada clase se comprueba:
+
+Que la clase base existe en la tabla de clases.
+
+Que la clase base no es una clase de herencia prohibida (por ejemplo, Int, Bool, String, SELF_TYPE, dependiendo de la implementación).
+
+Si alguna de estas condiciones falla, se registra un error semántico.
+
+Construcción del grafo de herencia
+
+Se construye una estructura tipo:
+
+cpp
+Copiar código
+std::map<Symbol, std::vector<Symbol>> inheritance_graph;
+donde:
 
 La clave es el nombre de la clase base.
 
-El valor es un vector de las clases que heredan de esa clase base.
+El valor es un vector con los nombres de las clases que heredan de esa base.
 
-El método también verifica que no existan ciclos en el grafo de herencia y garantiza que todas las clases hereden de clases existentes.
+Ejemplo conceptual:
 
-Ejemplo Práctico
+text
+Copiar código
+inheritance_graph["Object"] = ["IO", "Int", "Bool", "String"];
+Registro de errores
 
-A continuación, se presenta un ejemplo de un programa COOL y cómo el método build_inheritance_graph() construiría el grafo de herencia.
+Durante el proceso pueden detectarse errores como:
 
-Código COOL del Ejemplo:
+Herencia de una clase no definida.
+
+Herencia de una clase no permitida.
+
+Ciclos en la jerarquía de herencia.
+
+En estos casos, el método registra el error (por ejemplo con semant_error()) y la compilación se puede detener más adelante con algo como:
+
+cpp
+Copiar código
+if (class_table->errors())
+    raise_error();
+Estructura del grafo de herencia
+El grafo de herencia se almacena típicamente en un mapa llamado, por ejemplo, inheritance_graph:
+
+cpp
+Copiar código
+std::map<Symbol, std::vector<Symbol>> inheritance_graph;
+Clave: nombre de la clase padre.
+
+Valor: vector de nombres de clases hijas que heredan directamente de esa clase.
+
+Adicionalmente, suele existir otra estructura auxiliar, como:
+
+cpp
+Copiar código
+std::map<Symbol, Symbol> parent_type_of;
+que guarda, para cada clase, su clase padre:
+
+cpp
+Copiar código
+parent_type_of["IO"]     = "Object";
+parent_type_of["Int"]    = "Object";
+parent_type_of["Bool"]   = "Object";
+parent_type_of["String"] = "Object";
+Con estas dos estructuras (inheritance_graph y parent_type_of) se puede:
+
+Recorrer la jerarquía hacia arriba (hacia los ancestros).
+
+Recorrer la jerarquía hacia abajo (hacia las subclases).
+
+Ejemplo práctico
+Código COOL de ejemplo
+cool
+Copiar código
 class Object {
     abort(): Object;
     type_name(): String;
@@ -91,112 +169,89 @@ class String inherits Object {
     concat(s: String): String;
     substr(i: Int, j: Int): String;
 };
+Clases presentes:
 
+Object: clase base raíz de la jerarquía.
 
-En este programa, tenemos las siguientes clases:
+IO, Int, Bool, String: heredan directamente de Object.
 
-Object: Clase base de todas las clases en COOL.
+Paso a paso de build_inheritance_graph() en el ejemplo
+1. Clase Object
+Clase base: no tiene (es la raíz).
 
-IO, Int, Bool, String: Clases que heredan de Object.
+No se registra como hija de nadie en inheritance_graph.
 
-Proceso Paso a Paso en build_inheritance_graph():
-
-Clase Object:
-
-Clase base: No tiene clase base, es la raíz de la jerarquía.
-
-No se agrega al grafo de herencia porque Object no tiene clase base.
-
-Clase IO:
-
+2. Clase IO
 Clase base: Object.
 
-Se registra en el mapa parent_type_of:
+Se registra la relación:
 
+cpp
+Copiar código
 parent_type_of["IO"] = "Object";
-
-
-Se agrega IO al grafo de herencia de Object:
-
 inheritance_graph["Object"].push_back("IO");
+Estado del grafo:
 
-
-El grafo de herencia ahora tiene:
-
+text
+Copiar código
 inheritance_graph = {
     "Object" => ["IO"]
 };
-
-
-Clase Int:
-
+3. Clase Int
 Clase base: Object.
 
-Se registra en el mapa parent_type_of:
-
+cpp
+Copiar código
 parent_type_of["Int"] = "Object";
-
-
-Se agrega Int al grafo de herencia de Object:
-
 inheritance_graph["Object"].push_back("Int");
+Estado del grafo:
 
-
-El grafo de herencia ahora tiene:
-
+text
+Copiar código
 inheritance_graph = {
     "Object" => ["IO", "Int"]
 };
-
-
-Clase Bool:
-
+4. Clase Bool
 Clase base: Object.
 
-Se registra en el mapa parent_type_of:
-
+cpp
+Copiar código
 parent_type_of["Bool"] = "Object";
-
-
-Se agrega Bool al grafo de herencia de Object:
-
 inheritance_graph["Object"].push_back("Bool");
+Estado del grafo:
 
-
-El grafo de herencia ahora tiene:
-
+text
+Copiar código
 inheritance_graph = {
     "Object" => ["IO", "Int", "Bool"]
 };
-
-
-Clase String:
-
+5. Clase String
 Clase base: Object.
 
-Se registra en el mapa parent_type_of:
-
+cpp
+Copiar código
 parent_type_of["String"] = "Object";
-
-
-Se agrega String al grafo de herencia de Object:
-
 inheritance_graph["Object"].push_back("String");
+Estado final del grafo:
 
-
-El grafo de herencia ahora tiene:
-
+text
+Copiar código
 inheritance_graph = {
     "Object" => ["IO", "Int", "Bool", "String"]
 };
+Resultado final
+Al finalizar la ejecución de build_inheritance_graph(), el grafo de herencia refleja que:
 
-Resultado Final del Grafo de Herencia:
+Object es la clase raíz.
 
-Al finalizar la ejecución del método build_inheritance_graph(), el grafo de herencia será el siguiente:
+IO, Int, Bool y String son clases que heredan directamente de Object.
 
-inheritance_graph = {
-    "Object" => ["IO", "Int", "Bool", "String"]
-};
+Este grafo se utilizará después para:
 
+Comprobar tipos y compatibilidad en asignaciones y llamadas a métodos.
 
-Este grafo muestra que Object es la clase base de IO, Int, Bool y String. Estas clases heredan directamente de Object.
+Recorrer la jerarquía de clases durante el análisis semántico.
+
+Detectar errores relacionados con herencia y tipos.
+
+Copiar código
