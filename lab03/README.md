@@ -30,118 +30,172 @@ El proceso de creación del mapa de clases incluye las siguientes etapas:
 El método `create_class_map` se invoca dentro del método `program_class::semant()`, que es el punto de entrada principal para el análisis semántico. Aquí se muestra cómo se utiliza:
 
 
-# Método `build_inheritance_graph`
+## Método `build_inheritance_graph`
 
-Este documento describe el funcionamiento del método `build_inheritance_graph()` dentro de la estructura `ClassTable` del analizador semántico de COOL.  
-Su responsabilidad principal es construir el **grafo de herencia** del programa y verificar que la jerarquía de clases sea **válida y bien formada**.
+El método `build_inheritance_graph()` se encarga de construir el **grafo de herencia** del programa COOL a partir de las clases registradas en `class_map`.  
+Además, valida varias reglas de herencia y, en caso de violarse alguna, reporta errores semánticos y retorna `false`.
 
----
+Objetivo
+- Construir la estructura inheritance_graph que modela la jerarquía de clases.
+- Registrar, en parent_type_of, el padre directo de cada clase.
+- Validar que no se violen reglas básicas de herencia (heredar de clases prohibidas, heredar de clases no definidas, heredar de uno mismo).
 
-## Objetivo del método `build_inheritance_graph()`
+Esta función devuelve:
 
-El método `build_inheritance_graph()` construye el grafo de herencia de un programa COOL, donde se representan las relaciones jerárquicas entre las clases y sus clases base.  
-Además, realiza verificaciones semánticas para asegurar que:
+- true si el grafo de herencia pudo construirse sin errores.
+- false si se detecta alguna violación semántica (el llamador suele hacer if (!build_inheritance_graph()) raise_error();).
 
-- Todas las clases hereden de clases **definidas**.
-- No se herede de clases **prohibidas** (como `Int`, `Bool`, `String`, `SELF_TYPE`, según las reglas de COOL).
-- No existan **ciclos de herencia**.
-- La jerarquía sea **consistente** y utilizable en etapas posteriores del análisis semántico (tipos, métodos, etc.).
+Estructuras utilizadas
+class_map:
 
----
+```cpp
+std::map<Symbol, Class_> class_map;
+Mapa que asocia el nombre de la clase (Symbol) con su nodo de definición (Class_).
+```
 
-## Proceso general del método
+inheritance_graph:
 
-De forma simplificada, `build_inheritance_graph()` sigue estos pasos:
-
-1. **Recorrido de las clases**
-
-   Recorre todas las clases definidas en el programa utilizando una estructura como `class_lookup`, que mapea:
-
-   ```cpp
-   Symbol  ->  Class_ (definición de la clase)
-Obtención de la clase base
-
-Para cada clase se obtiene el nombre de su clase padre (base), normalmente algo como:
-
-cpp
-Copiar código
-Symbol parent_name = cls->get_parent();
-Verificación de herencia válida
-
-Para cada clase se comprueba:
-
-Que la clase base existe en la tabla de clases.
-
-Que la clase base no es una clase de herencia prohibida (por ejemplo, Int, Bool, String, SELF_TYPE, dependiendo de la implementación).
-
-Si alguna de estas condiciones falla, se registra un error semántico.
-
-Construcción del grafo de herencia
-
-Se construye una estructura tipo:
-
-cpp
-Copiar código
+```cpp
 std::map<Symbol, std::vector<Symbol>> inheritance_graph;
-donde:
+```
+Representación del grafo de herencia:
+- Clave: nombre de la clase padre.
+- Valor: lista de clases hijas que heredan directamente de esa clase.
+- parent_type_of:
 
-La clave es el nombre de la clase base.
-
-El valor es un vector con los nombres de las clases que heredan de esa base.
-
-Ejemplo conceptual:
-
-text
-Copiar código
-inheritance_graph["Object"] = ["IO", "Int", "Bool", "String"];
-Registro de errores
-
-Durante el proceso pueden detectarse errores como:
-
-Herencia de una clase no definida.
-
-Herencia de una clase no permitida.
-
-Ciclos en la jerarquía de herencia.
-
-En estos casos, el método registra el error (por ejemplo con semant_error()) y la compilación se puede detener más adelante con algo como:
-
-cpp
-Copiar código
-if (class_table->errors())
-    raise_error();
-Estructura del grafo de herencia
-El grafo de herencia se almacena típicamente en un mapa llamado, por ejemplo, inheritance_graph:
-
-cpp
-Copiar código
-std::map<Symbol, std::vector<Symbol>> inheritance_graph;
-Clave: nombre de la clase padre.
-
-Valor: vector de nombres de clases hijas que heredan directamente de esa clase.
-
-Adicionalmente, suele existir otra estructura auxiliar, como:
-
-cpp
-Copiar código
+```cpp
 std::map<Symbol, Symbol> parent_type_of;
-que guarda, para cada clase, su clase padre:
+Para cada clase, guarda el nombre de su clase padre:
+```
 
-cpp
-Copiar código
+```cpp
 parent_type_of["IO"]     = "Object";
 parent_type_of["Int"]    = "Object";
 parent_type_of["Bool"]   = "Object";
 parent_type_of["String"] = "Object";
-Con estas dos estructuras (inheritance_graph y parent_type_of) se puede:
+```
 
-Recorrer la jerarquía hacia arriba (hacia los ancestros).
+## Algoritmo paso a paso
 
-Recorrer la jerarquía hacia abajo (hacia las subclases).
+### Recorrido de todas las clases
 
-Ejemplo práctico
-Código COOL de ejemplo
-cool
+```cpp
+for (std::map<Symbol, Class_>::iterator it = class_map.begin();
+     it != class_map.end(); ++it) {
+    Symbol class_name = it->first;
+    ...
+}
+```
+
+Se itera sobre todas las entradas de class_map. Cada iteración procesa una clase del programa
+
+### Omisión de la clase Object
+
+```cpp
+Copiar código
+if (class_name == Object)
+    continue;
+```
+
+La clase Object es la raíz de la jerarquía; no tiene padre y no se registra como hija de nadie en el grafo.
+Obtención de la definición de la clase y su padre
+
+```cpp
+Class_ class_definition = it->second;
+Symbol parent_name = class_definition->get_parent();
+```
+
+class_definition: nodo del AST que representa a la clase.
+parent_name: nombre de la clase padre declarada en el código COOL (por ejemplo, Object, IO, etc.).
+
+## Clases sin padre explícito
+
+```cpp
+if (parent_name == No_class) continue;
+Si la clase no tiene padre (o se representa como No_class), no se registra en el grafo (caso especial de raíz u otras decisiones de diseño).
+```
+
+## Registro de la relación hijo → padre
+
+```cpp
+parent_type_of[class_name] = parent_name;
+Esto permite, más adelante, subir en la jerarquía desde cualquier clase hacia sus ancestros.
+```
+
+## Verificación de herencia de clases prohibidas
+
+```cpp
+if ( 
+    parent_name == Str ||  
+    parent_name == Int || 
+    parent_name == Bool ||
+    parent_name == SELF_TYPE
+)
+{
+    this->semant_error(class_definition)
+        << "Class "
+        << class_definition->get_name()
+        << " cannot inherit class "
+        << parent_name
+        << ".\n";
+    return false;
+}
+```
+
+COOL no permite heredar de ciertos tipos básicos (Int, Bool, String) ni de SELF_TYPE.
+Si se intenta, se reporta un error semántico y se detiene la construcción del grafo.
+
+## Verificación de que el padre exista
+
+```cpp
+if (this->class_map.find(parent_name) == this->class_map.end())
+{
+    semant_error(it->second) << "Class "
+        << class_name 
+        << " inherits from an undefined class "
+        << parent_name
+        << ".\n";
+    return false;
+}
+```
+Si el nombre de la clase padre no aparece en class_map, significa que el programa intenta heredar de una clase no definida.
+Esto también se reporta como error semántico.
+
+## Prevención de herencia de una clase sobre sí misma
+
+```cpp
+if (parent_name == class_name) {
+    semant_error(class_name) << "Class " << class_name
+                             << " cannot inherit from itself." << endl;
+    return false;
+}
+```
+
+Una clase no puede declararse como hija de sí misma. Este caso se detecta y se reporta.
+
+## Inicialización de la lista de hijos del padre (si es necesario)
+
+```cpp
+if (this->inheritance_graph.find(parent_name) == this->inheritance_graph.end()) {
+    this->inheritance_graph[parent_name] = std::vector<Symbol>();
+}
+```
+
+Si el padre aún no tiene una entrada en inheritance_graph, se crea una lista vacía para sus hijos.
+
+Registro de la arista padre → hijo en el grafo
+
+```cpp
+inheritance_graph[parent_name].push_back(class_name);
+```
+
+Se añade class_name a la lista de hijos de parent_name.
+De esta manera se va construyendo la representación del grafo de herencia.
+
+## Ejemplo conceptual del grafo resultante
+Para un programa como:
+\
+```cool
 Copiar código
 class Object {
     abort(): Object;
@@ -149,109 +203,29 @@ class Object {
     copy(): SELF_TYPE;
 };
 
-class IO inherits Object {
-    out_string(s: String): SELF_TYPE;
-    out_int(i: Int): SELF_TYPE;
-};
+class IO inherits Object { ... };
 
-class Int inherits Object {
-    val: Int;
-};
+class Int inherits Object { ... };
 
-class Bool inherits Object {
-    val: Bool;
-};
+class Bool inherits Object { ... };
 
-class String inherits Object {
-    val: Int;
-    str_field: String;
-    length(): Int;
-    concat(s: String): String;
-    substr(i: Int, j: Int): String;
-};
-Clases presentes:
+class String inherits Object { ... };
+```
 
-Object: clase base raíz de la jerarquía.
+El grafo de herencia construido quedaría, conceptualmente:
 
-IO, Int, Bool, String: heredan directamente de Object.
-
-Paso a paso de build_inheritance_graph() en el ejemplo
-1. Clase Object
-Clase base: no tiene (es la raíz).
-
-No se registra como hija de nadie en inheritance_graph.
-
-2. Clase IO
-Clase base: Object.
-
-Se registra la relación:
-
-cpp
-Copiar código
-parent_type_of["IO"] = "Object";
-inheritance_graph["Object"].push_back("IO");
-Estado del grafo:
-
-text
-Copiar código
-inheritance_graph = {
-    "Object" => ["IO"]
-};
-3. Clase Int
-Clase base: Object.
-
-cpp
-Copiar código
-parent_type_of["Int"] = "Object";
-inheritance_graph["Object"].push_back("Int");
-Estado del grafo:
-
-text
-Copiar código
-inheritance_graph = {
-    "Object" => ["IO", "Int"]
-};
-4. Clase Bool
-Clase base: Object.
-
-cpp
-Copiar código
-parent_type_of["Bool"] = "Object";
-inheritance_graph["Object"].push_back("Bool");
-Estado del grafo:
-
-text
-Copiar código
-inheritance_graph = {
-    "Object" => ["IO", "Int", "Bool"]
-};
-5. Clase String
-Clase base: Object.
-
-cpp
-Copiar código
-parent_type_of["String"] = "Object";
-inheritance_graph["Object"].push_back("String");
-Estado final del grafo:
-
-text
+```text
 Copiar código
 inheritance_graph = {
     "Object" => ["IO", "Int", "Bool", "String"]
-};
-Resultado final
-Al finalizar la ejecución de build_inheritance_graph(), el grafo de herencia refleja que:
+}
+```
 
-Object es la clase raíz.
+Y las relaciones en parent_type_of:
 
-IO, Int, Bool y String son clases que heredan directamente de Object.
-
-Este grafo se utilizará después para:
-
-Comprobar tipos y compatibilidad en asignaciones y llamadas a métodos.
-
-Recorrer la jerarquía de clases durante el análisis semántico.
-
-Detectar errores relacionados con herencia y tipos.
-
-Copiar código
+```cpp
+parent_type_of["IO"]     = "Object";
+parent_type_of["Int"]    = "Object";
+parent_type_of["Bool"]   = "Object";
+parent_type_of["String"] = "Object";
+```
