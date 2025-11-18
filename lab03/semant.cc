@@ -15,6 +15,8 @@ extern char *curr_filename;
 
 SymbolTable<Symbol,Symbol> *objects_table;
 
+Symbol current_class_name;
+Class_ current_class_definition;
 // TYPING ENVIRONMENT
 
 std::map<Symbol, method_class*> current_class_methods;
@@ -488,11 +490,50 @@ void classes_check(Classes classes) {
 }
 
 void type_check(Class_ next_class) {
+    // 1. Guardar el contexto de la clase actual
     current_class_name = next_class->get_name();
     current_class_definition = next_class;
+
+    // 2. Obtener los métodos y atributos de esa clase
     current_class_methods = get_class_methods(next_class);
     ensure_class_attributes_are_unique(next_class);
     current_class_attrs = get_class_attributes(next_class);
+
+    // 3. Crear tabla de símbolos de objetos (entorno de variables)
+    objects_table = new SymbolTable<Symbol, Symbol>();
+    objects_table->enterscope();
+
+    // 4. Registrar 'self' como variable con tipo la clase actual
+    objects_table->addid(self, new Symbol(current_class_definition->get_name()));
+
+    // 5. Registrar atributos de la clase en el entorno
+    // Que la subclase pueda ver los atributos de la superclase
+    build_attribute_scopes(next_class);
+    
+    // 6. Procesar firma de los métodos (parámetros, retorno, etc.)
+    for (const auto &x : current_class_methods) {
+        process_method(next_class, x.second, x.second);
+    }
+
+    // 7. Procesar atributos (coherencia con padres, etc.)
+    for (const auto &x : current_class_attrs) {
+        Symbol parent_type_name = class_table->get_parent_type_of(current_class_name);
+        Class_ parent_definition = class_table->class_lookup[parent_type_name];
+        process_attr(parent_definition, x.second);
+    }
+
+    // 8. Hacer type_check del *cuerpo* de cada atributo
+    for (const auto &x : current_class_attrs) {
+        x.second->type_check();
+    }
+
+    // 9. Hacer type_check del *cuerpo* de cada método
+    for (const auto &x : current_class_methods) {
+        x.second->type_check();
+    }
+
+    // 10. Salir del scope de la clase
+    objects_table->exitscope();
 }
 
 
