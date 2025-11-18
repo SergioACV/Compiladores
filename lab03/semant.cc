@@ -15,6 +15,14 @@ extern char *curr_filename;
 
 SymbolTable<Symbol,Symbol> *objects_table;
 
+// TYPING ENVIRONMENT
+
+std::map<Symbol, method_class*> current_class_methods;
+std::map<Symbol, attr_class*> current_class_attrs;
+
+std::map<Symbol, std::map<Symbol, method_class*> > class_methods;
+std::map<Symbol, std::map<Symbol, attr_class*> > class_attrs;
+
 //////////////////////////////////////////////////////////////////////
 //
 // Symbols
@@ -86,7 +94,70 @@ static void initialize_constants(void)
     val         = idtable.add_string("_val");
 }
 
+// ERROR
+ostream& ClassTable::semant_error(Class_ c)
+{                                                             
+    return semant_error(c->get_filename(), c);
+}    
 
+ostream& ClassTable::semant_error(Symbol filename, tree_node *t)
+{
+    error_stream << filename << ":" << t->get_line_number() << ": ";
+    return semant_error();
+}
+
+ostream& ClassTable::semant_error()                   
+{                                                  
+    semant_errors++;                             
+    return error_stream;
+}
+
+// UTILITIES
+std::map<Symbol, method_class*> ClassTable::get_class_methods(Class_ class_definition) {
+    std::map<Symbol, method_class*> class_methods;
+    Features class_features = class_definition->get_features();
+
+    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) {
+        Feature feature = class_features->nth(i);
+
+        if (!feature->is_method())
+            continue;
+
+        method_class* method = static_cast<method_class*>(feature);
+        Symbol method_name = method->get_name();
+
+        // Comprobación de duplicados
+        if (class_methods.find(method_name) != class_methods.end()) {
+            // ahora sí, esto compila porque estás dentro de ClassTable
+            semant_error(class_definition) 
+                << "The method " << method_name << " has already been defined!\n";
+        } else {
+            class_methods[method_name] = method;
+        }
+    }
+
+    return class_methods;
+}
+
+std::map<Symbol, attr_class*> ClassTable::get_class_attributes(Class_ class_definition) {
+    std::map<Symbol, attr_class*> class_attrs;
+    Features class_features = class_definition->get_features();
+
+    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) {
+        Feature feature = class_features->nth(i);
+
+        if (!feature->is_attr())
+            continue;
+
+        attr_class* attr = static_cast<attr_class*>(feature);
+        Symbol attr_name = attr->get_name();
+        class_attrs[attr_name] = attr;
+    }
+
+    return class_attrs;
+}
+
+// Errors 
 
 ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) {
     this->install_basic_classes();
@@ -310,7 +381,8 @@ bool ClassTable::build_inheritance_graph() {
 
         //cannot inherit from itself
         if (parent_name == class_name) {
-            semant_error(class_name) << "Class " << class_name << " cannot inherit from itself." << endl;
+            semant_error(class_definition)
+            << "Class " << class_name << " cannot inherit from itself." << endl;
             return false;
         }
 
@@ -381,48 +453,6 @@ bool ClassTable::walk_ast_to_register_methods_and_attributes() {
 void ClassTable::register_class_and_its_methods(Class_ class_definition) {
     class_methods[class_definition->get_name()] = get_class_methods(class_definition);
     class_attrs[class_definition->get_name()] = get_class_attributes(class_definition);
-}
-
-std::map<Symbol, method_class*> ClassTable::get_class_methods(Class_ class_definition) {
-    std::map<Symbol, method_class*> class_methods;
-    Features class_features = class_definition->get_features();
-
-    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) {
-        Feature feature = class_features->nth(i);
-
-        if (!feature->is_method())
-            continue;
-
-        method_class* method = static_cast<method_class*>(feature);
-        Symbol method_name = method->get_name();
-
-        // Comprobación de duplicados
-        if (class_methods.find(method_name) != class_methods.end()) {
-            semant_error(class_definition) << "The method " << method_name << " has already been defined!\n";
-        } else {
-            class_methods[method_name] = method;
-        }
-    }
-
-    return class_methods;
-}
-
-std::map<Symbol, attr_class*> ClassTable::get_class_attributes(Class_ class_definition) {
-    std::map<Symbol, attr_class*> class_attrs;
-    Features class_features = class_definition->get_features();
-
-    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) {
-        Feature feature = class_features->nth(i);
-
-        if (!feature->is_attr())
-            continue;
-
-        attr_class* attr = static_cast<attr_class*>(feature);
-        Symbol attr_name = attr->get_name();
-        class_attrs[attr_name] = attr;
-    }
-
-    return class_attrs;
 }
 
 bool ClassTable::walk_formals(Formals formals) {
@@ -516,25 +546,6 @@ bool ClassTable::walk_method(Feature f) {
 //
 ///////////////////////////////////////////////////////////////////
 
-ostream& ClassTable::semant_error(Class_ c)
-{                                                             
-    return semant_error(c->get_filename(),c);
-}    
-
-ostream& ClassTable::semant_error(Symbol filename, tree_node *t)
-{
-    error_stream << filename << ":" << t->get_line_number() << ": ";
-    return semant_error();
-}
-
-ostream& ClassTable::semant_error()                  
-{                                                 
-    semant_errors++;                            
-    return error_stream;
-} 
-
-
-
 /*   This is the entry point to the semantic checker.
 
      Your checker should do the following two things:
@@ -579,6 +590,4 @@ void program_class::semant()
 	cerr << "Compilation halted due to static semantic errors." << endl;
 	exit(1);
     }
-}
-
-
+};
