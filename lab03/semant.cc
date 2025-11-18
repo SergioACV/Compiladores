@@ -455,79 +455,44 @@ void ClassTable::register_class_and_its_methods(Class_ class_definition) {
     class_attrs[class_definition->get_name()] = get_class_attributes(class_definition);
 }
 
-bool ClassTable::walk_formals(Formals formals) {
-    //iterate over formals
-    for ( int i = formals->first(); formals->more(i); i = formals->next(i) ) {
-        Formal formal = formals->nth(i);
-        //add formal to symbol table
-        objects_table->addid(formal->get_name(), new Symbol(formal->get_type()));
+void ensure_class_attributes_are_unique(Class_ class_definition) {
+    std::set<Symbol> class_attrs;
+    Symbol class_name = class_definition->get_name();
+    Features class_features = class_definition->get_features();
+
+    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) 
+    {
+        Feature feature = class_features->nth(i);
+
+        if (!feature->is_attr())
+            continue;
+
+        attr_class* attr = static_cast<attr_class*>(feature);
+        Symbol attr_name = attr->get_name();
+        
+        if (class_attrs.find(attr_name) != class_attrs.end())
+        {
+            class_table->semant_error(class_definition)
+                << "The attribute :"
+                << attr_name
+                << " has already been defined!\n";
+        }
+        class_attrs.insert(attr_name);
     }
-    return true;
 }
 
-bool ClassTable::walk_expression(Expression expr) {
-    
-    //let_expression: use dynamic cast to check type
-    if (let_class* let_expr = dynamic_cast<let_class*>(expr)) {
-        
+void classes_check(Classes classes) {
+    for (int i = classes->first(); classes->more(i); i = classes->next(i)) {
+        type_check(classes->nth(i));
     }
-
-    //assign_expression: use dynamic cast to check type
-    else if (assign_class* assign_expr = dynamic_cast<assign_class*>(expr)) {
-        
-    }
-
-    //dispatch_expression: use dynamic cast to check type
-    else if (dispatch_class* dispatch_expr = dynamic_cast<dispatch_class*>(expr)) {
-        
-    }
-
-    //static_dispatch_expression: use dynamic cast to check type
-    else if (static_dispatch_class* static_dispatch_expr = dynamic_cast<static_dispatch_class*>(expr)) {
-        
-    }
-
-
-    //cond_expression: use dynamic cast to check type
-    else if (cond_class* cond_expr = dynamic_cast<cond_class*>(expr)) {
-        
-    }
-
-    //loop_expression: use dynamic cast to check type
-    else if (loop_class* loop_expr = dynamic_cast<loop_class*>(expr)) {
-        
-    }
-
-    //typcase_expression: use dynamic cast to check type
-    else if (typcase_class* typcase_expr = dynamic_cast<typcase_class*>(expr)) {
-        
-    }
-
-    
-
-
-    return true;
 }
 
-
-bool ClassTable::walk_method(Feature f) {
-    method_class* method = dynamic_cast<method_class*>(f);
-    
-    //enter scope
-    objects_table->enterscope();
-    //add formals to symbol table
-    Formals formals = method->get_formals();
-    walk_formals(formals);
-    //TO DO: process method body expression
-    Expression body = method->get_body_expr();
-    walk_expression(body);
-
-    //exit scope
-    objects_table->exitscope();
-
-
-    return true;
-    
+void type_check(Class_ next_class) {
+    current_class_name = next_class->get_name();
+    current_class_definition = next_class;
+    current_class_methods = get_class_methods(next_class);
+    ensure_class_attributes_are_unique(next_class);
+    current_class_attrs = get_class_attributes(next_class);
 }
 
 
@@ -583,6 +548,9 @@ void program_class::semant()
 
     /* walk*/
     classtable->walk_ast_to_register_methods_and_attributes();
+
+    /* Start validations */
+    classtable->classes_check(classes);
     
     /* some semantic analysis code may go here */
 

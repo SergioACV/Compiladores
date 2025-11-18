@@ -108,21 +108,21 @@ Symbol parent_name = class_definition->get_parent();
 class_definition: nodo del AST que representa a la clase.
 parent_name: nombre de la clase padre declarada en el código COOL (por ejemplo, Object, IO, etc.).
 
-## Clases sin padre explícito
+### Clases sin padre explícito
 
 ```cpp
 if (parent_name == No_class) continue;
 Si la clase no tiene padre (o se representa como No_class), no se registra en el grafo (caso especial de raíz u otras decisiones de diseño).
 ```
 
-## Registro de la relación hijo → padre
+### Registro de la relación hijo → padre
 
 ```cpp
 parent_type_of[class_name] = parent_name;
 Esto permite, más adelante, subir en la jerarquía desde cualquier clase hacia sus ancestros.
 ```
 
-## Verificación de herencia de clases prohibidas
+### Verificación de herencia de clases prohibidas
 
 ```cpp
 if ( 
@@ -145,7 +145,7 @@ if (
 COOL no permite heredar de ciertos tipos básicos (Int, Bool, String) ni de SELF_TYPE.
 Si se intenta, se reporta un error semántico y se detiene la construcción del grafo.
 
-## Verificación de que el padre exista
+### Verificación de que el padre exista
 
 ```cpp
 if (this->class_map.find(parent_name) == this->class_map.end())
@@ -161,7 +161,7 @@ if (this->class_map.find(parent_name) == this->class_map.end())
 Si el nombre de la clase padre no aparece en class_map, significa que el programa intenta heredar de una clase no definida.
 Esto también se reporta como error semántico.
 
-## Prevención de herencia de una clase sobre sí misma
+### Prevención de herencia de una clase sobre sí misma
 
 ```cpp
 if (parent_name == class_name) {
@@ -173,7 +173,7 @@ if (parent_name == class_name) {
 
 Una clase no puede declararse como hija de sí misma. Este caso se detecta y se reporta.
 
-## Inicialización de la lista de hijos del padre (si es necesario)
+### Inicialización de la lista de hijos del padre (si es necesario)
 
 ```cpp
 if (this->inheritance_graph.find(parent_name) == this->inheritance_graph.end()) {
@@ -192,7 +192,7 @@ inheritance_graph[parent_name].push_back(class_name);
 Se añade class_name a la lista de hijos de parent_name.
 De esta manera se va construyendo la representación del grafo de herencia.
 
-## Ejemplo conceptual del grafo resultante
+### Ejemplo conceptual del grafo resultante
 Para un programa como:
 \
 ```cool
@@ -229,3 +229,167 @@ parent_type_of["Int"]    = "Object";
 parent_type_of["Bool"]   = "Object";
 parent_type_of["String"] = "Object";
 ```
+
+## Método walk_ast_to_register_methods_and_attributes
+
+El método walk_ast_to_register_methods_and_attributes() recorre todas las clases del programa (las contenidas en class_map) y construye dos estructuras centrales para el análisis semántico:
+
+- Un mapa de métodos por clase (class_methods).
+- Un mapa de atributos por clase (class_attrs).
+
+Con esto, el analizador semántico puede resolver, más adelante, qué métodos y atributos están disponibles en cada clase, verificar redefiniciones, herencias y tipos.
+
+### Funcionamiento general
+
+
+En program_class::semant() este método se invoca después de haber construido el grafo de herencia y detectado ciclos:
+
+```cpp
+void program_class::semant()
+{
+    initialize_constants();
+
+    ClassTable *classtable = new ClassTable(classes);
+
+    classtable->create_class_map(classes);
+    classtable->check_inheritance_exists();
+    classtable->is_main_class_defined();
+    classtable->build_inheritance_graph();
+    classtable->detect_cycles();
+
+    /* Recorre el AST de clases para registrar métodos y atributos */
+    classtable->walk_ast_to_register_methods_and_attributes();
+}
+```
+
+La implementación básica es:
+
+```cpp
+bool ClassTable::walk_ast_to_register_methods_and_attributes() {
+    for (std::map<Symbol, Class_>::iterator it = class_map.begin();
+         it != class_map.end(); ++it) {
+        Class_ c = it->second;
+        register_class_and_its_methods(c);
+    } 
+    return true;
+}
+```
+
+
+Para cada clase registrada en class_map, se llama a register_class_and_its_methods.
+
+Registro de métodos y atributos por clase
+Método register_class_and_its_methods
+
+```cpp
+void ClassTable::register_class_and_its_methods(Class_ class_definition) {
+    class_methods[class_definition->get_name()] = get_class_methods(class_definition);
+    class_attrs[class_definition->get_name()]   = get_class_attributes(class_definition);
+}
+```
+
+
+Este método:
+
+- Obtiene todos los métodos declarados en la clase mediante get_class_methods(...) y los almacena en class_methods[class_name].
+- Obtiene todos los atributos declarados en la clase mediante get_class_attributes(...) y los almacena en class_attrs[class_name].
+
+De esta forma, para cada nombre de clase se tiene acceso rápido a sus métodos y atributos propios (sin herencia todavía).
+
+### Estructuras utilizadas
+
+Conceptualmente, las estructuras manejadas por ClassTable son:
+
+```cpp
+// Métodos definidos en cada clase
+std::map<Symbol, std::map<Symbol, method_class*> > class_methods;
+
+// Atributos definidos en cada clase
+std::map<Symbol, std::map<Symbol, attr_class*> > class_attrs;
+```
+
+- Clave externa: nombre de la clase.
+- Clave interna: nombre del método o atributo.
+- Valor: puntero al nodo correspondiente en el AST (method_class* o attr_class*).
+
+```cpp
+Obtención de métodos de una clase: get_class_methods
+std::map<Symbol, method_class*> ClassTable::get_class_methods(Class_ class_definition) {
+    std::map<Symbol, method_class*> class_methods;
+    Features class_features = class_definition->get_features();
+
+    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) {
+        Feature feature = class_features->nth(i);
+
+        if (!feature->is_method())
+            continue;
+
+        method_class* method = static_cast<method_class*>(feature);
+        Symbol method_name = method->get_name();
+
+        // Comprobación de duplicados
+        if (class_methods.find(method_name) != class_methods.end()) {
+            semant_error(class_definition) 
+                << "The method " << method_name << " has already been defined!\n";
+        } else {
+            class_methods[method_name] = method;
+        }
+    }
+
+    return class_methods;
+}
+```
+
+
+Pasos principales:
+
+- Se obtienen las features de la clase (class_definition->get_features()).
+- Se recorre cada Feature:
+- Si no es un método (!feature->is_method()), se ignora.
+- Si es un método, se castea a method_class* y se obtiene su nombre.
+- Se verifica si el método ya fue declarado en la misma clase:
+- Si ya existe un método con el mismo nombre, se reporta un error semántico por redefinición.
+- Si no existe, se inserta en el mapa local class_methods.
+- Al finalizar, se devuelve el mapa de métodos propios de esa clase.
+
+Esto asegura que en una misma clase no se definan dos métodos con el mismo nombre.
+
+Obtención de atributos de una clase: get_class_attributes
+```cpp
+std::map<Symbol, attr_class*> ClassTable::get_class_attributes(Class_ class_definition) {
+    std::map<Symbol, attr_class*> class_attrs;
+    Features class_features = class_definition->get_features();
+
+    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) {
+        Feature feature = class_features->nth(i);
+
+        if (!feature->is_attr())
+            continue;
+
+        attr_class* attr = static_cast<attr_class*>(feature);
+        Symbol attr_name = attr->get_name();
+        class_attrs[attr_name] = attr;
+    }
+
+    return class_attrs;
+}
+```
+
+
+Pasos principales:
+
+- Se recorren las features de la clase.
+- Solo se procesan aquellas que son atributos (feature->is_attr()).
+- Cada atributo se guarda en un mapa local class_attrs, indexado por su nombre.
+- El mapa resultante se retorna y se asocia a la clase en register_class_and_its_methods.
+- A diferencia de los métodos, en esta implementación base no se verifica aún si hay atributos duplicados en la misma clase; esa validación puede añadirse más adelante si se requiere.
+
+### Resumen del rol de este paso en el análisis semántico
+
+Una vez ejecutado walk_ast_to_register_methods_and_attributes():
+- El compilador conoce, para cada clase, qué métodos y atributos están directamente declarados en ella.
+- Esta información se utiliza en fases posteriores del análisis semántico para:
+- Verificar redefiniciones válidas de métodos en subclases.
+- Comprobar el acceso correcto a atributos.
+- Construir entornos de símbolos (scopes) consistentes durante el chequeo de tipos de expresiones.
+- En conjunto con create_class_map() y build_inheritance_graph(), este paso completa la estructura básica necesaria para un análisis semántico robusto del programa COOL.
