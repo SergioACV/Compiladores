@@ -237,13 +237,86 @@ Este proyecto contiene la implementación de las clases necesarias para represen
 En el archivo `cool-tree.handcode.h`, se definen varias funciones de interfaz para manipular las listas de clases, características, parámetros formales, expresiones y casos. Estas funciones son esenciales para manejar la creación, modificación y conexión de las diferentes entidades que forman un programa COOL.
 
 ---
+# Documentación del Proyecto - Analizador Semántico
+
+Este proyecto es parte de la implementación del compilador para el lenguaje **COOL** (Classroom Object Oriented Language). El propósito principal de este componente es realizar el **análisis semántico** de los programas escritos en COOL, asegurando que los programas sean **semánticamente correctos** antes de generar el código intermedio.
+
+## Descripción del Proyecto
+
+El **analizador semántico** es responsable de verificar la **validez semántica** de los programas en COOL. A través de una serie de comprobaciones, el analizador asegura que las clases, métodos, atributos, expresiones y tipos estén correctamente definidos y que el código cumpla con las reglas del lenguaje.
+
+### Estructura Principal del Proyecto
+
+El proyecto está compuesto por varios módulos que manejan las diferentes partes del análisis semántico:
+
+- **`semant.h`**: Definiciones de la clase `ClassTable`, que gestiona la información de las clases y su herencia, así como las funciones para verificar tipos y errores semánticos.
+- **`semant.cc`**: Implementación de las funciones del analizador semántico, que realizan la comprobación de la semántica, construyen el árbol de herencia, y verifican la validez de las clases y métodos definidos por el usuario.
+
+## Función `initialize_constants()`
+
+### Propósito
+
+La función **`initialize_constants()`** se encarga de inicializar los **símbolos constantes** que serán utilizados a lo largo del compilador para hacer referencia a los tipos primitivos, métodos y nombres reservados en el lenguaje COOL. Estos símbolos son esenciales para realizar las verificaciones semánticas durante la fase de compilación.
+
+### Detalles de la Implementación
+
+La función **`initialize_constants()`** asigna símbolos a las siguientes entidades predefinidas en COOL:
+
+- **Tipos primitivos**: `Int`, `Bool`, `Str`, `Object`, `SELF_TYPE`
+- **Métodos reservados**: `cool_abort`, `copy`, `length`, `concat`, `substr`, `out_int`, etc.
+- **Atributos especiales**: `self`, `val`, `str_field`, `type_name`
+
+## Constructor `ClassTable::ClassTable(Classes classes)`
+
+El constructor `ClassTable` es responsable de crear la tabla de clases (`class_lookup`) e inicializar las clases predeterminadas como `Object`, `IO`, `Int`, `Bool`, y `Str`. Estas clases son fundamentales para el funcionamiento del lenguaje COOL.
+
+### Detalles de la Función `install_basic_classes`
+
+El método `install_basic_classes` define las clases básicas del lenguaje COOL. A continuación se describen las clases y sus métodos principales:
+
+### 1. **Clase `Object`**
+   - **Descripción**: La clase base para todas las clases en COOL.
+   - **Métodos**:
+     - `abort()`: Aborta la ejecución del programa.
+     - `type_name()`: Retorna una representación de cadena del nombre de la clase.
+     - `copy()`: Crea una copia del objeto.
+
+### 2. **Clase `IO`**
+   - **Descripción**: Clase que hereda de `Object` y proporciona funcionalidades para la entrada/salida.
+   - **Métodos**:
+     - `out_string(Str)`: Imprime una cadena.
+     - `out_int(Int)`: Imprime un número entero.
+     - `in_string()`: Lee una cadena desde la entrada.
+     - `in_int()`: Lee un número entero desde la entrada.
+
+### 3. **Clase `Int`**
+   - **Descripción**: Hereda de `Object` y representa los números enteros.
+   - **Atributos**:
+     - `val`: Un atributo que almacena el valor entero.
+
+### 4. **Clase `Bool`**
+   - **Descripción**: Hereda de `Object` y representa valores booleanos (`true` o `false`).
+   - **Atributos**:
+     - `val`: Un atributo que almacena el valor booleano.
+
+### 5. **Clase `Str`**
+   - **Descripción**: Hereda de `Object` y representa las cadenas de texto.
+   - **Atributos**:
+     - `val`: La longitud de la cadena.
+     - `str_field`: El contenido de la cadena.
+   - **Métodos**:
+     - `length()`: Retorna la longitud de la cadena.
+     - `concat(Str)`: Realiza la concatenación de dos cadenas.
+     - `substr(Int, Int)`: Extrae un subconjunto de la cadena.
+
+### Agregando las Clases a la Tabla `class_lookup`
+
+Una vez que las clases básicas son definidas, se agregan a la tabla de clases `class_lookup` utilizando su nombre como clave y la definición de la clase como valor. Este paso asegura que las clases estén disponibles para su uso en cualquier parte del programa COOL.
+
+
 
 ## Conclusión
 
 El archivo `cool-tree.h` define las clases y constructores fundamentales para representar un programa COOL en un compilador. Estas clases se organizan en diferentes "phylum" o categorías, que incluyen programas, clases, características, expresiones y casos. Los métodos definidos en cada clase permiten copiar y mostrar las estructuras de datos correspondientes, mientras que las extensiones en `cool-tree.handcode.h` añaden funciones para manipular y verificar los tipos de las expresiones.
 
 Esta estructura es esencial para la implementación de un compilador para el lenguaje COOL, proporcionando una base para construir y analizar árboles sintácticos abstractos (AST).
-
----
-
-Este archivo `README.md` está ahora estructurado adecuadamente con títulos y subtítulos. Puedes copiarlo directamente a tu archivo `README.md` para documentar tu proyecto.
