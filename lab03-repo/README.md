@@ -314,6 +314,95 @@ El método `install_basic_classes` define las clases básicas del lenguaje COOL.
 Una vez que las clases básicas son definidas, se agregan a la tabla de clases `class_lookup` utilizando su nombre como clave y la definición de la clase como valor. Este paso asegura que las clases estén disponibles para su uso en cualquier parte del programa COOL.
 
 
+## Constructor `build_inheritance_graph`
+
+### Objetivo
+
+- Construir un grafo de herencia de clases en COOL.
+- Validar las relaciones de herencia entre las clases.
+- Detectar ciclos en la herencia y relaciones inválidas entre clases.
+
+## Explicación de la Función
+
+### 1. Iteración sobre las clases definidas
+
+La función comienza iterando sobre todas las clases que están registradas en el mapa `class_lookup`. Este mapa contiene el nombre de cada clase (como clave) y la definición de la clase correspondiente (como valor).
+
+```cpp
+for (it = this->class_lookup.begin(); it != this->class_lookup.end(); ++it)
+{
+    Symbol class_name = it->first;
+    Class_ class_definition = it->second;
+}
+```
+
+### 2. Comprobación de la clase Object
+La clase Object es la raíz de la jerarquía de herencia en COOL, y no tiene un padre. Por lo tanto, no es necesario procesarla en este paso.
+
+```cpp
+Copiar código
+if (class_name == Object)
+    continue;
+```
+
+### 3. Obtención y almacenamiento del padre de la clase
+Para cada clase, se obtiene el nombre de la clase padre y se almacena en el mapa parent_type_of. Este mapa permite realizar consultas rápidas sobre el tipo del padre de cada clase.
+
+```cpp
+Copiar código
+Symbol class_parent_name = class_definition->get_parent_name();
+parent_type_of[class_name] = class_parent_name;
+```
+
+### 4. Validación de relaciones de herencia
+
+-  Restricciones de herencia inválida
+Se verifica si una clase intenta heredar de clases no permitidas, como Str, Int, Bool o SELF_TYPE. Estas clases son fundamentales y no pueden ser heredadas.
+
+```cpp
+Copiar código
+if (class_parent_name == Str || class_parent_name == Int || class_parent_name == Bool || class_parent_name == SELF_TYPE)
+{
+    this->semant_error(class_definition)
+        << "Class " << class_definition->get_name()
+        << " cannot inherit class " << class_parent_name << ".\n";
+    return false;
+}
+```
+
+- Verificación de clases inexistentes
+Se comprueba que la clase padre realmente exista en el sistema. Si no es así, se genera un error.
+
+```cpp
+Copiar código
+if (this->class_lookup.find(class_parent_name) == this->class_lookup.end())
+{
+    this->semant_error(class_definition)
+        << "Class " << class_name
+        << " inherits from an undefined class " << class_parent_name << ".\n";
+    return false;
+}
+```
+
+### 5. Creación de la entrada para el padre en el grafo
+Si la clase padre aún no tiene una entrada en el grafo de herencia, se crea una nueva entrada con un vector vacío.
+
+```cpp
+Copiar código
+if (this->inheritance_graph.find(class_parent_name) == this->inheritance_graph.end())
+{
+    this->inheritance_graph[class_parent_name] = std::vector<Symbol>();
+}
+```
+
+### 6. Agregando la clase actual al grafo
+Una vez que la clase padre es verificada, la clase actual se agrega a la lista de hijos de esa clase en el grafo de herencia.
+
+```cpp
+Copiar código
+this->inheritance_graph[class_parent_name].push_back(class_name);
+```
+
 
 ## Conclusión
 
