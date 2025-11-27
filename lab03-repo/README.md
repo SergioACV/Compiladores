@@ -1,395 +1,313 @@
-# Analizador Semántico de COOL
+Documentación del Proyecto COOL - Estructuras y Clases
 
-Este es un analizador semántico para el lenguaje de programación COOL (Classroom Object-Oriented Language). Su propósito es verificar la corrección semántica de los programas escritos en COOL, asegurando que las clases, los métodos, y las expresiones estén bien definidos y sean consistentes.
+Este proyecto contiene la implementación de las clases necesarias para representar las construcciones del lenguaje de programación COOL (un lenguaje diseñado para la enseñanza de compiladores). Las clases y constructores definidos en los archivos cool-tree.h y cool-tree.handcode.h son fundamentales para la representación de programas COOL en el compilador, en forma de árboles sintácticos abstractos (AST).
 
-## Descripción general
+Estructura del Proyecto
+Archivos Principales
 
-El analizador semántico realiza dos tareas principales:
+cool-tree.h: Define las clases y estructuras que representan las entidades del lenguaje COOL, como programas, clases, métodos, atributos, expresiones, y casos.
 
-1. Verificar que el programa sea semánticamente correcto.
-2. Decorar el árbol de sintaxis abstracta (AST) con la información de tipo, ajustando el campo `type` de cada nodo de expresión.
+cool-tree.handcode.h: Contiene funciones adicionales para manipular las clases definidas en cool-tree.h, como la serialización (impresión de la estructura en un flujo de salida), copias de objetos, y verificación de tipos.
 
-## `create_class_map`: Explicación del método
+Clases Definidas en cool-tree.h
+1. Program_class
 
-### Propósito
+Descripción: Representa un programa en COOL, que consiste en un conjunto de clases.
 
-El método `create_class_map` es responsable de construir un mapa interno de las clases definidas en el programa COOL. Este mapa se utiliza para realizar un seguimiento de todas las clases y sus relaciones de herencia, lo que es esencial para el análisis semántico posterior.
+Métodos:
 
-### Funcionamiento
+copy_Program(): Método virtual para copiar el programa.
 
-Este método recibe como entrada la lista de clases definidas en el programa y crea un mapa que vincula los nombres de las clases con sus respectivas representaciones. El mapa resultante (`class_map`) permite al analizador semántico acceder rápidamente a la información de cada clase, facilitando la verificación de la existencia de herencias, la validación de métodos y el control de los errores semánticos.
+copy(): Llama a copy_Program() para crear una copia de la instancia.
 
-El proceso de creación del mapa de clases incluye las siguientes etapas:
+2. Class__class
 
-1. **Inicialización de clases**: El método recorre todas las clases definidas en el programa y las agrega a una estructura de datos interna.
-2. **Relaciones de herencia**: Durante este proceso, también se verifican las relaciones de herencia entre clases, asegurándose de que las clases base existan en el mapa y que no haya ciclos en la jerarquía de herencia.
-3. **Verificación de errores**: Si alguna clase no se puede agregar correctamente al mapa (por ejemplo, si intenta heredar de una clase no definida), se genera un error semántico que detiene la compilación.
+Descripción: Representa una clase en COOL. Cada clase tiene un nombre, un tipo de clase base, y un conjunto de características (métodos y atributos).
 
-### Ejemplo de uso
+Métodos:
 
-El método `create_class_map` se invoca dentro del método `program_class::semant()`, que es el punto de entrada principal para el análisis semántico. Aquí se muestra cómo se utiliza:
+copy_Class_(): Método virtual para copiar la clase.
 
+copy(): Llama a copy_Class_() para crear una copia de la instancia.
 
-## Método `build_inheritance_graph`
+3. Feature_class
 
-El método `build_inheritance_graph()` se encarga de construir el **grafo de herencia** del programa COOL a partir de las clases registradas en `class_map`.  
-Además, valida varias reglas de herencia y, en caso de violarse alguna, reporta errores semánticos y retorna `false`.
+Descripción: Representa una característica (atributo o método) de una clase.
 
-Objetivo
-- Construir la estructura inheritance_graph que modela la jerarquía de clases.
-- Registrar, en parent_type_of, el padre directo de cada clase.
-- Validar que no se violen reglas básicas de herencia (heredar de clases prohibidas, heredar de clases no definidas, heredar de uno mismo).
+Métodos:
 
-Esta función devuelve:
+copy_Feature(): Método virtual para copiar la característica.
 
-- true si el grafo de herencia pudo construirse sin errores.
-- false si se detecta alguna violación semántica (el llamador suele hacer if (!build_inheritance_graph()) raise_error();).
+copy(): Llama a copy_Feature().
 
-Estructuras utilizadas
-class_map:
+4. Formal_class
 
-```cpp
-std::map<Symbol, Class_> class_map;
-Mapa que asocia el nombre de la clase (Symbol) con su nodo de definición (Class_).
-```
+Descripción: Representa un parámetro formal de un método.
 
-inheritance_graph:
+Métodos:
 
-```cpp
-std::map<Symbol, std::vector<Symbol>> inheritance_graph;
-```
-Representación del grafo de herencia:
-- Clave: nombre de la clase padre.
-- Valor: lista de clases hijas que heredan directamente de esa clase.
-- parent_type_of:
+copy_Formal(): Método virtual para copiar el parámetro formal.
 
-```cpp
-std::map<Symbol, Symbol> parent_type_of;
-Para cada clase, guarda el nombre de su clase padre:
-```
+copy(): Llama a copy_Formal().
 
-```cpp
-parent_type_of["IO"]     = "Object";
-parent_type_of["Int"]    = "Object";
-parent_type_of["Bool"]   = "Object";
-parent_type_of["String"] = "Object";
-```
+5. Expression_class
 
-## Algoritmo paso a paso
+Descripción: Representa una expresión en COOL, que puede ser una operación, un valor constante, o una asignación.
 
-### Recorrido de todas las clases
+Métodos:
 
-```cpp
-for (std::map<Symbol, Class_>::iterator it = class_map.begin();
-     it != class_map.end(); ++it) {
-    Symbol class_name = it->first;
-    ...
-}
-```
+copy_Expression(): Método virtual para copiar la expresión.
 
-Se itera sobre todas las entradas de class_map. Cada iteración procesa una clase del programa
+copy(): Llama a copy_Expression().
 
-### Omisión de la clase Object
+6. Case_class
 
-```cpp
-Copiar código
-if (class_name == Object)
-    continue;
-```
+Descripción: Representa un caso dentro de una expresión typcase, que se utiliza para realizar pruebas de tipo en tiempo de ejecución.
 
-La clase Object es la raíz de la jerarquía; no tiene padre y no se registra como hija de nadie en el grafo.
-Obtención de la definición de la clase y su padre
-
-```cpp
-Class_ class_definition = it->second;
-Symbol parent_name = class_definition->get_parent();
-```
-
-class_definition: nodo del AST que representa a la clase.
-parent_name: nombre de la clase padre declarada en el código COOL (por ejemplo, Object, IO, etc.).
-
-### Clases sin padre explícito
-
-```cpp
-if (parent_name == No_class) continue;
-Si la clase no tiene padre (o se representa como No_class), no se registra en el grafo (caso especial de raíz u otras decisiones de diseño).
-```
-
-### Registro de la relación hijo → padre
-
-```cpp
-parent_type_of[class_name] = parent_name;
-Esto permite, más adelante, subir en la jerarquía desde cualquier clase hacia sus ancestros.
-```
-
-### Verificación de herencia de clases prohibidas
-
-```cpp
-if ( 
-    parent_name == Str ||  
-    parent_name == Int || 
-    parent_name == Bool ||
-    parent_name == SELF_TYPE
-)
-{
-    this->semant_error(class_definition)
-        << "Class "
-        << class_definition->get_name()
-        << " cannot inherit class "
-        << parent_name
-        << ".\n";
-    return false;
-}
-```
-
-COOL no permite heredar de ciertos tipos básicos (Int, Bool, String) ni de SELF_TYPE.
-Si se intenta, se reporta un error semántico y se detiene la construcción del grafo.
+Métodos:
 
-### Verificación de que el padre exista
+copy_Case(): Método virtual para copiar el caso.
 
-```cpp
-if (this->class_map.find(parent_name) == this->class_map.end())
-{
-    semant_error(it->second) << "Class "
-        << class_name 
-        << " inherits from an undefined class "
-        << parent_name
-        << ".\n";
-    return false;
-}
-```
-Si el nombre de la clase padre no aparece en class_map, significa que el programa intenta heredar de una clase no definida.
-Esto también se reporta como error semántico.
-
-### Prevención de herencia de una clase sobre sí misma
+copy(): Llama a copy_Case().
 
-```cpp
-if (parent_name == class_name) {
-    semant_error(class_name) << "Class " << class_name
-                             << " cannot inherit from itself." << endl;
-    return false;
-}
-```
-
-Una clase no puede declararse como hija de sí misma. Este caso se detecta y se reporta.
-
-### Inicialización de la lista de hijos del padre (si es necesario)
-
-```cpp
-if (this->inheritance_graph.find(parent_name) == this->inheritance_graph.end()) {
-    this->inheritance_graph[parent_name] = std::vector<Symbol>();
-}
-```
-
-Si el padre aún no tiene una entrada en inheritance_graph, se crea una lista vacía para sus hijos.
+Clases de Constructores
+1. program_class
 
-Registro de la arista padre → hijo en el grafo
-
-```cpp
-inheritance_graph[parent_name].push_back(class_name);
-```
-
-Se añade class_name a la lista de hijos de parent_name.
-De esta manera se va construyendo la representación del grafo de herencia.
+Descripción: Representa un programa COOL. El constructor toma una lista de clases y las almacena en el atributo classes.
 
-### Ejemplo conceptual del grafo resultante
-Para un programa como:
-\
-```cool
-Copiar código
-class Object {
-    abort(): Object;
-    type_name(): String;
-    copy(): SELF_TYPE;
-};
+Métodos:
 
-class IO inherits Object { ... };
+copy_Program(): Copia el programa.
 
-class Int inherits Object { ... };
+dump(): Imprime el programa.
 
-class Bool inherits Object { ... };
+2. class__class
 
-class String inherits Object { ... };
-```
+Descripción: Representa una clase en COOL, que contiene un nombre, un tipo de clase base (padre), una lista de características (métodos y atributos), y el nombre del archivo.
 
-El grafo de herencia construido quedaría, conceptualmente:
+Métodos:
 
-```text
-Copiar código
-inheritance_graph = {
-    "Object" => ["IO", "Int", "Bool", "String"]
-}
-```
+copy_Class_(): Copia la clase.
 
-Y las relaciones en parent_type_of:
+dump(): Imprime la clase.
 
-```cpp
-parent_type_of["IO"]     = "Object";
-parent_type_of["Int"]    = "Object";
-parent_type_of["Bool"]   = "Object";
-parent_type_of["String"] = "Object";
-```
+3. method_class
 
-## Método walk_ast_to_register_methods_and_attributes
+Descripción: Representa un método en una clase. Cada método tiene un nombre, una lista de parámetros formales, un tipo de retorno, y una expresión que define el cuerpo del método.
 
-El método walk_ast_to_register_methods_and_attributes() recorre todas las clases del programa (las contenidas en class_map) y construye dos estructuras centrales para el análisis semántico:
+Métodos:
 
-- Un mapa de métodos por clase (class_methods).
-- Un mapa de atributos por clase (class_attrs).
+copy_Feature(): Copia el método.
 
-Con esto, el analizador semántico puede resolver, más adelante, qué métodos y atributos están disponibles en cada clase, verificar redefiniciones, herencias y tipos.
+dump(): Imprime el método.
 
-### Funcionamiento general
+4. attr_class
 
+Descripción: Representa un atributo de una clase. Un atributo tiene un nombre, un tipo declarado, y una expresión de inicialización.
 
-En program_class::semant() este método se invoca después de haber construido el grafo de herencia y detectado ciclos:
+Métodos:
 
-```cpp
-void program_class::semant()
-{
-    initialize_constants();
+copy_Feature(): Copia el atributo.
 
-    ClassTable *classtable = new ClassTable(classes);
+dump(): Imprime el atributo.
 
-    classtable->create_class_map(classes);
-    classtable->check_inheritance_exists();
-    classtable->is_main_class_defined();
-    classtable->build_inheritance_graph();
-    classtable->detect_cycles();
+5. formal_class
 
-    /* Recorre el AST de clases para registrar métodos y atributos */
-    classtable->walk_ast_to_register_methods_and_attributes();
-}
-```
+Descripción: Representa un parámetro formal de un método.
 
-La implementación básica es:
+Métodos:
 
-```cpp
-bool ClassTable::walk_ast_to_register_methods_and_attributes() {
-    for (std::map<Symbol, Class_>::iterator it = class_map.begin();
-         it != class_map.end(); ++it) {
-        Class_ c = it->second;
-        register_class_and_its_methods(c);
-    } 
-    return true;
-}
-```
+copy_Formal(): Copia el parámetro formal.
 
+dump(): Imprime el parámetro formal.
 
-Para cada clase registrada en class_map, se llama a register_class_and_its_methods.
+6. branch_class
 
-Registro de métodos y atributos por clase
-Método register_class_and_its_methods
+Descripción: Representa una rama dentro de una expresión typcase. Cada rama tiene un nombre, un tipo declarado y una expresión asociada.
 
-```cpp
-void ClassTable::register_class_and_its_methods(Class_ class_definition) {
-    class_methods[class_definition->get_name()] = get_class_methods(class_definition);
-    class_attrs[class_definition->get_name()]   = get_class_attributes(class_definition);
-}
-```
+Métodos:
 
+copy_Case(): Copia la rama.
 
-Este método:
+dump(): Imprime la rama.
 
-- Obtiene todos los métodos declarados en la clase mediante get_class_methods(...) y los almacena en class_methods[class_name].
-- Obtiene todos los atributos declarados en la clase mediante get_class_attributes(...) y los almacena en class_attrs[class_name].
+Clases de Expresiones
+1. assign_class
 
-De esta forma, para cada nombre de clase se tiene acceso rápido a sus métodos y atributos propios (sin herencia todavía).
+Descripción: Representa una asignación de un valor a una variable.
 
-### Estructuras utilizadas
+Métodos:
 
-Conceptualmente, las estructuras manejadas por ClassTable son:
+copy_Expression(): Copia la asignación.
 
-```cpp
-// Métodos definidos en cada clase
-std::map<Symbol, std::map<Symbol, method_class*> > class_methods;
+dump(): Imprime la asignación.
 
-// Atributos definidos en cada clase
-std::map<Symbol, std::map<Symbol, attr_class*> > class_attrs;
-```
+2. static_dispatch_class
 
-- Clave externa: nombre de la clase.
-- Clave interna: nombre del método o atributo.
-- Valor: puntero al nodo correspondiente en el AST (method_class* o attr_class*).
+Descripción: Representa una llamada a un método estático.
 
-```cpp
-Obtención de métodos de una clase: get_class_methods
-std::map<Symbol, method_class*> ClassTable::get_class_methods(Class_ class_definition) {
-    std::map<Symbol, method_class*> class_methods;
-    Features class_features = class_definition->get_features();
+Métodos:
 
-    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) {
-        Feature feature = class_features->nth(i);
+copy_Expression(): Copia la llamada estática.
 
-        if (!feature->is_method())
-            continue;
+dump(): Imprime la llamada estática.
 
-        method_class* method = static_cast<method_class*>(feature);
-        Symbol method_name = method->get_name();
+3. dispatch_class
 
-        // Comprobación de duplicados
-        if (class_methods.find(method_name) != class_methods.end()) {
-            semant_error(class_definition) 
-                << "The method " << method_name << " has already been defined!\n";
-        } else {
-            class_methods[method_name] = method;
-        }
-    }
+Descripción: Representa una llamada a un método en un objeto.
 
-    return class_methods;
-}
-```
+Métodos:
 
+copy_Expression(): Copia la llamada a método.
 
-Pasos principales:
+dump(): Imprime la llamada al método.
 
-- Se obtienen las features de la clase (class_definition->get_features()).
-- Se recorre cada Feature:
-- Si no es un método (!feature->is_method()), se ignora.
-- Si es un método, se castea a method_class* y se obtiene su nombre.
-- Se verifica si el método ya fue declarado en la misma clase:
-- Si ya existe un método con el mismo nombre, se reporta un error semántico por redefinición.
-- Si no existe, se inserta en el mapa local class_methods.
-- Al finalizar, se devuelve el mapa de métodos propios de esa clase.
+4. cond_class
 
-Esto asegura que en una misma clase no se definan dos métodos con el mismo nombre.
+Descripción: Representa una expresión condicional (similar a un if en otros lenguajes).
 
-Obtención de atributos de una clase: get_class_attributes
-```cpp
-std::map<Symbol, attr_class*> ClassTable::get_class_attributes(Class_ class_definition) {
-    std::map<Symbol, attr_class*> class_attrs;
-    Features class_features = class_definition->get_features();
+Métodos:
 
-    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) {
-        Feature feature = class_features->nth(i);
+copy_Expression(): Copia la expresión condicional.
 
-        if (!feature->is_attr())
-            continue;
+dump(): Imprime la expresión condicional.
 
-        attr_class* attr = static_cast<attr_class*>(feature);
-        Symbol attr_name = attr->get_name();
-        class_attrs[attr_name] = attr;
-    }
+5. loop_class
 
-    return class_attrs;
-}
-```
+Descripción: Representa un bucle (similar a un while en otros lenguajes).
 
+Métodos:
 
-Pasos principales:
+copy_Expression(): Copia el bucle.
 
-- Se recorren las features de la clase.
-- Solo se procesan aquellas que son atributos (feature->is_attr()).
-- Cada atributo se guarda en un mapa local class_attrs, indexado por su nombre.
-- El mapa resultante se retorna y se asocia a la clase en register_class_and_its_methods.
-- A diferencia de los métodos, en esta implementación base no se verifica aún si hay atributos duplicados en la misma clase; esa validación puede añadirse más adelante si se requiere.
+dump(): Imprime el bucle.
 
-### Resumen del rol de este paso en el análisis semántico
+6. typcase_class
 
-Una vez ejecutado walk_ast_to_register_methods_and_attributes():
-- El compilador conoce, para cada clase, qué métodos y atributos están directamente declarados en ella.
-- Esta información se utiliza en fases posteriores del análisis semántico para:
-- Verificar redefiniciones válidas de métodos en subclases.
-- Comprobar el acceso correcto a atributos.
-- Construir entornos de símbolos (scopes) consistentes durante el chequeo de tipos de expresiones.
-- En conjunto con create_class_map() y build_inheritance_graph(), este paso completa la estructura básica necesaria para un análisis semántico robusto del programa COOL.
+Descripción: Representa una expresión de tipo typcase, que se utiliza para realizar comprobaciones de tipo dinámicas.
+
+Métodos:
+
+copy_Expression(): Copia la expresión typcase.
+
+dump(): Imprime la expresión typcase.
+
+7. block_class
+
+Descripción: Representa un bloque de expresiones que se ejecutan secuencialmente.
+
+Métodos:
+
+copy_Expression(): Copia el bloque de expresiones.
+
+dump(): Imprime el bloque de expresiones.
+
+8. let_class
+
+Descripción: Representa una expresión let que declara una variable y le asigna un valor.
+
+Métodos:
+
+copy_Expression(): Copia la expresión let.
+
+dump(): Imprime la expresión let.
+
+9. plus_class, sub_class, mul_class, divide_class
+
+Descripción: Representan operaciones aritméticas (suma, resta, multiplicación y división).
+
+Métodos:
+
+copy_Expression(): Copia la operación aritmética.
+
+dump(): Imprime la operación aritmética.
+
+10. neg_class
+
+Descripción: Representa la operación de negación lógica.
+
+Métodos:
+
+copy_Expression(): Copia la negación lógica.
+
+dump(): Imprime la negación lógica.
+
+11. lt_class, eq_class, leq_class
+
+Descripción: Representan las operaciones de comparación (menor que, igual a, menor o igual que).
+
+Métodos:
+
+copy_Expression(): Copia la operación de comparación.
+
+dump(): Imprime la operación de comparación.
+
+12. comp_class
+
+Descripción: Representa la operación de negación lógica (como un not).
+
+Métodos:
+
+copy_Expression(): Copia la negación lógica.
+
+dump(): Imprime la negación lógica.
+
+13. int_const_class, bool_const_class, string_const_class
+
+Descripción: Representan constantes enteras, booleanas y de cadena.
+
+Métodos:
+
+copy_Expression(): Copia la constante.
+
+dump(): Imprime la constante.
+
+14. new__class
+
+Descripción: Representa una operación de creación de un nuevo objeto.
+
+Métodos:
+
+copy_Expression(): Copia la operación de creación de un objeto.
+
+dump(): Imprime la operación de creación.
+
+15. isvoid_class
+
+Descripción: Representa la operación isvoid, que verifica si un valor es de tipo void.
+
+Métodos:
+
+copy_Expression(): Copia la expresión isvoid.
+
+dump(): Imprime la expresión isvoid.
+
+16. no_expr_class
+
+Descripción: Representa una expresión vacía o nula.
+
+Métodos:
+
+copy_Expression(): Copia la expresión vacía.
+
+dump(): Imprime la expresión vacía.
+
+17. object_class
+
+Descripción: Representa un objeto en COOL.
+
+Métodos:
+
+copy_Expression(): Copia el objeto.
+
+dump(): Imprime el objeto.
+
+Funciones de Interfaz
+
+En el archivo cool-tree.handcode.h, se definen varias funciones de interfaz para manipular las listas de clases, características, parámetros formales, expresiones y casos. Estas funciones son esenciales para manejar la creación, modificación y conexión de las diferentes entidades que forman un programa COOL.
+
+Conclusión
+
+El archivo cool-tree.h define las clases y constructores fundamentales para representar un programa COOL en un compilador. Estas clases se organizan en diferentes "phylum" o categorías, que incluyen programas, clases, características, expresiones y casos. Los métodos definidos en cada clase permiten copiar y mostrar las estructuras de datos correspondientes, mientras que las extensiones en cool-tree.handcode.h añaden funciones para manipular y verificar los tipos de las expresiones.
+
+Esta estructura es esencial para la implementación de un compilador para el lenguaje COOL, proporcionando una base para construir y analizar árboles sintácticos abstractos (AST).
