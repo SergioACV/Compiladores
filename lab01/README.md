@@ -6,7 +6,7 @@ Este proyecto implementa un compilador para el lenguaje de programación COOL (C
 
 El analizador léxico de Flex se divide en cuatro partes principales:
 
-### 1. **Declaraciones (`%{ ... %}`)**
+# 1. **Declaraciones (`%{ ... %}`)**
 
 La primera parte del archivo de especificaciones de Flex contiene declaraciones que se incluyen directamente en el código C generado por Flex. Estas declaraciones se utilizan para importar bibliotecas, definir variables globales, y configurar parámetros para el funcionamiento del analizador léxico.
 
@@ -63,7 +63,7 @@ Este documento detalla las definiciones utilizadas en el analizador léxico del 
 1. Definición de Estados (%x)
 En esta sección se definen los estados que el analizador léxico puede tener durante la ejecución. Los estados permiten al analizador controlar el flujo de procesamiento de diferentes tipos de tokens y manejar situaciones especiales como cadenas de texto y comentarios.
 
-## Estados Definidos
+# 2. **Estados Definidos (`%{ ... %}`)**
 
 ```
 %x STRING: Este estado se utiliza para procesar cadenas de texto en el lenguaje COOL. Cuando el analizador entra en este estado, se asegura de que está dentro de una cadena de caracteres y procesará los caracteres hasta que encuentre el delimitador de cierre de la cadena.
@@ -169,7 +169,7 @@ En esta sección se han definido los estados y expresiones regulares que el anal
 
 Cada expresión regular se asigna a un tipo de token específico, que es devuelto por el scanner cuando ese patrón se encuentra en el código fuente. Esto permite que el código COOL sea correctamente tokenizado y procesado por el analizador sintáctico posterior.
 
-# Reglas del Analizador Léxico
+# 3. **Reglas del Analizador Léxico (`%{ ... %}`)** 
 Este documento detalla las reglas del analizador léxico del compilador COOL. Cada regla en Flex está formada por un patrón y una acción que se ejecuta cuando el patrón es detectado en el código fuente. Las reglas aquí definidas permiten al analizador léxico procesar los diferentes componentes del lenguaje COOL, como operadores, identificadores, palabras clave, comentarios, y más.
 
 1. Manejo de Nuevas Líneas
@@ -407,7 +407,7 @@ Acción: Se guarda el texto en cool_yylval.error_msg y se retorna el token ERROR
 Resumen
 En esta sección se han definido las reglas del analizador léxico, que determinan cómo se procesan los diferentes tokens del lenguaje COOL. Cada regla tiene un patrón (expresión regular) y una acción que se ejecuta cuando el patrón es detectado. Las reglas incluyen el manejo de comentarios, operadores, identificadores, constantes, cadenas de texto y manejo de errores.
 
-# Proyecto Compilador COOL - Subrutinas de Usuario
+# 4. **Subrutinas de Usuario (`%{ ... %}`)**
 
 Esta sección detalla las subrutinas de usuario utilizadas en el analizador léxico del compilador COOL. Estas funciones ayudan a manejar situaciones especiales durante el análisis léxico, como la verificación de la longitud de las cadenas y el manejo de errores relacionados con las cadenas.
 
