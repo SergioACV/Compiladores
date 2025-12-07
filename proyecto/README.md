@@ -1,12 +1,14 @@
 # Modificación del Lexer de COOL para Implementación de Guía de Estilo
 
-Este proyecto se enfoca en modificar el lexer del lenguaje de programación COOL (Classroom Object-Oriented Language) para implementar una guía de estilo. La guía tiene como objetivo estandarizar la escritura de código y mejorar su legibilidad, consistencia y facilidad de mantenimiento.
+Este proyecto se enfoca en modificar el lexer del lenguaje de programación COOL (Classroom Object-Oriented Language) para implementar una guía de estilo. La guía tiene como objetivo estandarizar la escritura de código y mejorar su legibilidad, consistencia y facilidad de mantenimiento. 
 
-## Nota Importante
+> ⚠️ **Importante:**  
+> En este proyecto no se busca explicar el funcionamiento del lexer de COOL. 
+>
+> **Recomendaciones:**
+> - Si deseas comprender cómo funciona el lexer antes de revisar las modificaciones realizadas para implementar la guía de estilo, se recomienda leer el archivo `README.md` de la carpeta **Lab 1**, donde se detalla el funcionamiento original del lexer.
 
-En este proyecto no se busca explicar el funcionamiento del lexer de COOL. Si deseas comprender cómo funciona el lexer antes de revisar las modificaciones realizadas para implementar la guía de estilo, se recomienda leer el archivo `README.md` de la carpeta **Lab 1**, donde se detalla el funcionamiento original del lexer.
 
-Esta sección está orientada a describir las modificaciones y adiciones específicas relacionadas con la implementación de la guía de estilo en el lexer.
 
 ## 1. Definición de Guía de Estilo
 
