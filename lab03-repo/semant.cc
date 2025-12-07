@@ -911,7 +911,7 @@ Symbol plus_class::type_check() {
         this->set_type(Int);
     else
     {
-        class_table->semant_error(this) 
+        class_table-semant_error(this) 
             << "Expected both arguments of operator +to be of type Int"
             << " but got arguments of types "
             << left_type
@@ -967,7 +967,8 @@ Symbol branch_class::type_check() {
     if (declaration_id == self) {
         class_table->semant_error(this) << "'self' cannot be bound in a 'branch' expression.";
     }
-    objects_table->enterscope();
+    
+    
     objects_table->addid(declaration_id, new Symbol(declaration_type));
     Symbol branch_expr_type = expr->type_check();
     this->set_type(branch_expr_type);

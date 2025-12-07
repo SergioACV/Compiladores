@@ -403,6 +403,104 @@ Copiar código
 this->inheritance_graph[class_parent_name].push_back(class_name);
 ```
 
+## 1. `inheritance_dfs(Symbol symbol)`
+
+Esta función realiza una **búsqueda en profundidad (DFS)** sobre el grafo de herencia para detectar ciclos. Utiliza un esquema de **colores** para marcar el estado de cada nodo (clase) durante la exploración del grafo. 
+
+- **Estados posibles**:
+  - `gray`: Nodo en proceso de ser visitado.
+  - `black`: Nodo completamente visitado.
+  - `white`: Nodo no visitado.
+
+**Algoritmo**:
+1. Se marca el nodo actual como `gray`.
+2. Se itera sobre los hijos del nodo actual (es decir, las clases hijas).
+3. Si se encuentra un hijo que ya está marcado como `gray`, significa que se ha detectado un ciclo de herencia.
+4. Si no se detecta un ciclo, se marca el nodo como `black`.
+
+**Código**:
+
+```cpp
+bool ClassTable::inheritance_dfs(Symbol symbol) {
+    color_of[symbol] = gray;
+
+    std::vector<Symbol> &vec = inheritance_graph[symbol];
+    std::vector<Symbol>::iterator it;
+
+    for (it = vec.begin(); it != vec.end(); ++it)
+    {
+        Symbol x = *it;
+
+        if (color_of[x] == gray) // Ciclo detectado
+        {
+            semant_error() << "There exists an (in) direct circular dependency between: ";
+            symbol->print(semant_error());
+            semant_error() << " and ";
+            x->print(semant_error());
+            return false;
+        }
+        else
+        {
+            if (!inheritance_dfs(x)) // Llamada recursiva
+                return false;
+        }
+    }
+
+    color_of[symbol] = black; // Nodo procesado completamente
+    return true;
+}```
+
+2. is_inheritance_graph_acyclic()
+Esta función verifica si el grafo de herencia es acíclico. Realiza un DFS desde cada clase para asegurarse de que no haya ciclos. Si se detecta un ciclo, la función retorna false. Si no se detectan ciclos, retorna true.
+
+Código:
+
+```cpp
+Copiar código
+bool ClassTable::is_inheritance_graph_acyclic() {
+    color_of.clear(); // Limpiar los colores antes de comenzar
+
+    // Inicializar colores a "white"
+    std::map<Symbol, Class_>::iterator it;
+    for (it = class_lookup.begin(); it != class_lookup.end(); ++it) {
+        color_of[it->first] = white;
+    }
+
+    // DFS desde nodos blancos
+    for (it = class_lookup.begin(); it != class_lookup.end(); ++it) {
+        Symbol sym = it->first;
+
+        if (color_of[sym] == white) {
+            if (!this->inheritance_dfs(sym)) // Llamada recursiva al DFS
+                return false;
+        }
+    }
+
+    return true; // El grafo de herencia es acíclico
+}
+```
+
+### 3. is_class_table_valid()
+Esta función verifica la validez de la tabla de clases en su totalidad. Realiza dos comprobaciones clave:
+Verifica que el grafo de herencia no tenga ciclos mediante is_inheritance_graph_acyclic().
+Verifica que la clase Main esté definida, ya que es obligatoria para la ejecución del programa COOL.
+
+Código:
+
+```cpp
+Copiar código
+bool ClassTable::is_class_table_valid() {
+    if (!this->is_inheritance_graph_acyclic()) // Verifica que el grafo de herencia no tenga ciclos
+        return false;
+
+    if (!this->is_type_defined(Main)) { // Verifica que la clase Main esté definida
+        semant_error() << "Class Main is not defined.\n";
+        return false;
+    }
+
+    return true; // La tabla de clases es válida
+}
+```
 
 ## Conclusión
 
