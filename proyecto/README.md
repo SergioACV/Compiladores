@@ -102,8 +102,15 @@ line_length = 0;
     curr_lineno++;
 }
 ```
-
-### 4. Subrutinas
+# Referencias
+## PEM 8
+> https://peps.python.org/pep-0008/
+## CS143 Compilers
+> https://web.stanford.edu/class/cs143/
+## Repositorio de referencia 
+> https://github.com/gboduljak/stanford-compilers-coursework/tree/master
+## Compiladores unal 2025-2
+> https://siabog.unal.edu.co/academia/catalogo-programas/info-asignatura.sdo?plan=2933&asignatura=2027642
 
 ---
 
